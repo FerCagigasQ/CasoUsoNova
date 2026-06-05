@@ -53,9 +53,6 @@ services:
       PATH: "/opt/nova/nova-cli/bin:/opt/nova/nodejs:/opt/nova/tools/java/bin:/opt/nova/tools/maven/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     volumes:
       - paperclip-data:/paperclip
-      - ./toolchain/nova-le:/opt/nova:ro
-      - ./toolchain/zulu-jdk11:/opt/nova/tools/java:ro
-      - ./toolchain/prepare-apis-generated.js:/opt/prepare-apis-generated.js:ro
     depends_on:
       db:
         condition: service_healthy
