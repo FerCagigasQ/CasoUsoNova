@@ -10,7 +10,11 @@
 # The toolchain is cached at ~/.nova-toolchain/7.8.0/ (or NOVA_INSTALL_DIR).
 # Subsequent runs skip the download.
 
+# Save caller's shell options and restore on exit (safe for sourcing)
+_nova_old_opts="$(set +o)"
 set -euo pipefail
+_nova_restore_opts() { eval "$_nova_old_opts"; unset _nova_old_opts; unset -f _nova_restore_opts; }
+trap _nova_restore_opts RETURN 2>/dev/null || true
 
 NOVA_VERSION="7.8.0"
 NOVA_RELEASE_URL="https://github.com/FerCagigasQ/CosmosPaperClip/releases/download/nova-toolchain-v${NOVA_VERSION}/nova-toolchain-v${NOVA_VERSION}.tar.gz"
