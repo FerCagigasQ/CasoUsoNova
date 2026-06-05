@@ -26,7 +26,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - Endpoints CRUD implementados
 - PR a main con código
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/1
 
 ---
 
@@ -42,7 +43,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - Proxy config para API Gateway
 - PR a main con código
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/2
 
 ---
 
@@ -57,7 +59,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - docs/integracion.md (diagrama, configuración, testing)
 - PR a main con código
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/3
 
 ---
 
@@ -74,7 +77,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - docs/async-communication.md (diagrama, AsyncAPI spec)
 - PR a main con código
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/4
 
 ---
 
@@ -90,7 +94,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - CHANGELOG.md para v1.0.0
 - PR a main con documentación
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/5
 
 ---
 
@@ -109,7 +114,8 @@ Delegar el trabajo del producto GDPD a 6 equipos especializados mediante sub-iss
 - docs/monitoring-guide.md (dashboards, métricas)
 - PR a main con código
 
-**Status:** Abierto - Esperando inicio de trabajo
+**Status:** ✅ ABIERTO en GitHub (Listo para trabajo)  
+**GitHub Link:** https://github.com/FerCagigasQ/CasoUsoNova/issues/6
 
 ---
 
