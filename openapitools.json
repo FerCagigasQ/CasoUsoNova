@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "configs": [
+    {
+      "specFile": "swagger/gdpd-pedidos-api.yaml",
+      "generatorName": "java",
+      "output": "api-generated/java-client",
+      "packageName": "com.gdpd.pedidos.api.client"
+    }
+  ]
+}
