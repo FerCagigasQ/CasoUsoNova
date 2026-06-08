@@ -1,0 +1,94 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: gdpd-event-processor
+  datasource:
+    url: jdbc:postgresql://localhost:5432/novadb
+    username: nova
+    password: nova
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    config:
+      enabled: false
+    function:
+      definition: pedidosIn;pedidosInDlq
+    stream:
+      bindings:
+        pedidosIn-in-0:
+          destination: pedidos.eventos
+          group: gdpd-event-processor
+          content-type: application/json
+        pedidosInDlq-in-0:
+          destination: pedidos.eventos.dlq
+          group: gdpd-event-processor-dlq
+          content-type: application/json
+      rabbit:
+        bindings:
+          pedidosIn-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-name: pedidos.eventos.dlq
+              republish-to-dlq: true
+              requeue-rejected: false
+              max-attempts: 3
+              back-off-initial-interval: 1000
+              back-off-multiplier: 2.0
+              back-off-max-interval: 10000
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.bbva.gdpd: DEBUG
+    org.springframework.cloud.stream: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pro
+  rabbitmq:
+    host: rabbitmq-cluster.nova.internal
+    port: 5672
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}
+    virtual-host: /nova
+    connection-timeout: 5000
+  cloud:
+    stream:
+      rabbit:
+        bindings:
+          pedidosIn-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-name: pedidos.eventos.dlq
+              republish-to-dlq: true
+              requeue-rejected: false
+              max-attempts: 3
+              back-off-initial-interval: 1000
+              back-off-multiplier: 2.0
+              back-off-max-interval: 10000
+              prefetch: 10
+              concurrency: 5
