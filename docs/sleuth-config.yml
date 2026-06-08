@@ -1,0 +1,33 @@
+# Spring Cloud Sleuth — Distributed Tracing — Configuración GDPD
+# Integrar en application.yml por perfil
+
+spring:
+  sleuth:
+    sampler:
+      probability: 1.0       # dev/int: 100%; pre: 50%; pro: 10%
+    propagation:
+      type: B3               # Compatible con Zipkin y OpenTelemetry
+    web:
+      enabled: true
+    async:
+      enabled: true
+    messaging:
+      enabled: true          # Traza mensajes JMS/RabbitMQ
+    scheduled:
+      enabled: true          # Traza tareas @Scheduled
+    feign:
+      enabled: true          # Propagación de traceId en llamadas Feign
+    rx:
+      enabled: true
+  zipkin:
+    base-url: http://zipkin:9411
+    enabled: true
+    sender:
+      type: web              # Envío HTTP (alternativa: kafka, rabbit)
+  application:
+    name: gdpd-pedidos-api   # Reemplazar por nombre del servicio
+
+# Logging con traceId automático
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
