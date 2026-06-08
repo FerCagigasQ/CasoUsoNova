@@ -1,0 +1,57 @@
+<div class="pedido-detail">
+  <button class="btn-back" (click)="volver()">← Volver a la lista</button>
+
+  <div *ngIf="loading" class="loading">Cargando pedido...</div>
+  <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+  <ng-container *ngIf="pedido && !loading">
+    <h2>Pedido #{{ pedido.numeroPedido }}</h2>
+
+    <div class="pedido-info">
+      <div class="field"><span class="label">ID:</span> {{ pedido.id }}</div>
+      <div class="field"><span class="label">Cliente:</span> {{ pedido.clienteId }}</div>
+      <div class="field"><span class="label">Estado:</span>
+        <span class="estado-badge estado-{{ pedido.estado | lowercase }}">{{ pedido.estado }}</span>
+      </div>
+      <div class="field"><span class="label">Importe Total:</span> {{ pedido.importeTotal | currency:'EUR' }}</div>
+      <div class="field"><span class="label">Fecha Creación:</span> {{ pedido.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</div>
+      <div class="field"><span class="label">Última Actualización:</span> {{ pedido.fechaActualizacion | date:'dd/MM/yyyy HH:mm' }}</div>
+    </div>
+
+    <div class="lineas-section" *ngIf="pedido.lineas && pedido.lineas.length > 0">
+      <h3>Líneas del Pedido</h3>
+      <table class="lineas-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Descripción</th>
+            <th>Cantidad</th>
+            <th>Precio Unit.</th>
+            <th>Importe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let linea of pedido.lineas">
+            <td>{{ linea.productoId }}</td>
+            <td>{{ linea.descripcion }}</td>
+            <td>{{ linea.cantidad }}</td>
+            <td>{{ linea.precioUnitario | currency:'EUR' }}</td>
+            <td>{{ linea.importeLinea | currency:'EUR' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <div class="cambiar-estado">
+        <label>Cambiar estado:</label>
+        <select (change)="cambiarEstado($any($event.target).value)" [disabled]="cambiandoEstado">
+          <option value="">-- seleccionar --</option>
+          <option *ngFor="let estado of estadosDisponibles" [value]="estado">{{ estado }}</option>
+        </select>
+        <span *ngIf="cambiandoEstado" class="spinner">Actualizando...</span>
+      </div>
+      <button class="btn-danger" (click)="eliminar()">Eliminar Pedido</button>
+    </div>
+  </ng-container>
+</div>
