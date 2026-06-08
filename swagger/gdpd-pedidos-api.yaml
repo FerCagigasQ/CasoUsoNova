@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: GDPD Pedidos API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+  - url: http://localhost:24000/gdpd/pedidos-api/1.0.0
+paths:
+  /api/v1/pedidos:
+    get:
+      summary: Listar pedidos
+      responses:
+        '200':
+          description: Lista de pedidos
+    post:
+      summary: Crear pedido
+      responses:
+        '201':
+          description: Pedido creado
+  /api/v1/pedidos/{id}:
+    get:
+      summary: Obtener pedido
+      responses:
+        '200':
+          description: Pedido encontrado
+    put:
+      summary: Actualizar pedido
+      responses:
+        '200':
+          description: Actualizado
+    delete:
+      summary: Eliminar pedido
+      responses:
+        '204':
+          description: Eliminado
+  /api/v1/pedidos/{id}/estado:
+    patch:
+      summary: Cambiar estado
+      responses:
+        '200':
+          description: Estado actualizado
+  /api/v1/pedidos/{id}/lineas:
+    get:
+      summary: Listar lineas
+      responses:
+        '200':
+          description: Lista de lineas
+    post:
+      summary: Anadir linea
+      responses:
+        '201':
+          description: Linea anadida
