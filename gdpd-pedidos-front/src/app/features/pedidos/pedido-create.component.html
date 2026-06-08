@@ -1,0 +1,49 @@
+<div class="pedido-create">
+  <h2>Nuevo Pedido</h2>
+
+  <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+  <form (ngSubmit)="crear()" #f="ngForm">
+    <div class="form-field">
+      <label for="clienteId">ID Cliente *</label>
+      <input id="clienteId" type="text" [(ngModel)]="clienteId" name="clienteId"
+             placeholder="Ej: CLI-001" required />
+    </div>
+
+    <div class="form-field">
+      <label for="observaciones">Observaciones</label>
+      <textarea id="observaciones" [(ngModel)]="observaciones" name="observaciones"
+                rows="3" placeholder="Observaciones opcionales"></textarea>
+    </div>
+
+    <div class="lineas-section">
+      <div class="lineas-header">
+        <h3>Líneas del Pedido</h3>
+        <button type="button" class="btn-secondary" (click)="anadirLinea()">+ Añadir línea</button>
+      </div>
+
+      <div class="linea-row" *ngFor="let linea of lineas; let i = index">
+        <input type="text" [(ngModel)]="linea.productoId" [name]="'productoId-' + i"
+               placeholder="ID Producto" required />
+        <input type="text" [(ngModel)]="linea.descripcion" [name]="'desc-' + i"
+               placeholder="Descripción" />
+        <input type="number" [(ngModel)]="linea.cantidad" [name]="'cant-' + i"
+               placeholder="Cantidad" min="1" required />
+        <input type="number" [(ngModel)]="linea.precioUnitario" [name]="'precio-' + i"
+               placeholder="Precio Unit." min="0" step="0.01" required />
+        <button type="button" class="btn-icon-danger" (click)="quitarLinea(i)">✕</button>
+      </div>
+
+      <div class="importe-total" *ngIf="lineas.length > 0">
+        <strong>Total estimado: {{ importeTotal() | currency:'EUR' }}</strong>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-secondary" (click)="cancelar()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="enviando || !clienteId.trim()">
+        {{ enviando ? 'Creando...' : 'Crear Pedido' }}
+      </button>
+    </div>
+  </form>
+</div>
