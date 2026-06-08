@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8080
 
 spring:
@@ -16,11 +16,23 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  activemq:
-    broker-url: tcp://localhost:61616
-    user: admin
-    password: admin
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
   cloud:
+    stream:
+      bindings:
+        pedidos-out-0:
+          destination: pedidos.eventos
+          content-type: application/json
+      rabbit:
+        bindings:
+          pedidos-out-0:
+            producer:
+              auto-bind-dlq: true
+              republish-to-dlq: true
     config:
       enabled: false
   sleuth:
