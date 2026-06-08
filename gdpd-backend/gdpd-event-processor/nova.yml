@@ -1,0 +1,17 @@
+subsistema: gdpd-backend
+servicio:
+  nombre: gdpd-event-processor
+  tipo: demon
+  tecnologia: java11
+  puerto: 8082
+dependencias:
+  brokers:
+    - nombre: gdpd.pedidos.eventos
+      tipo: queue
+      rol: consumidor
+recursos:
+  cpu: 256m
+  memoria: 512Mi
+  replicas:
+    min: 1
+    max: 2
