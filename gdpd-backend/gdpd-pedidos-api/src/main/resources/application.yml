@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8080
 
 spring:
@@ -33,7 +33,6 @@ spring:
             producer:
               auto-bind-dlq: true
               republish-to-dlq: true
-  cloud:
     config:
       enabled: false
   sleuth:
