@@ -1,23 +1,28 @@
 package com.bbva.gdpd.pedidos.model;
 
-import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
 
-public class PedidoEvent implements Serializable {
+public class PedidoEvent {
 
     private String pedidoId;
     private String tipo;
     private String estado;
-    private String clienteId;
-    private Double importe;
+    private String codigoCliente;
+    private BigDecimal importe;
+    private Instant timestamp;
+    private String origen;
 
     public PedidoEvent() {}
 
-    public PedidoEvent(String pedidoId, String tipo, String estado, String clienteId, Double importe) {
+    public PedidoEvent(String pedidoId, String tipo, String estado, String codigoCliente, BigDecimal importe) {
         this.pedidoId = pedidoId;
         this.tipo = tipo;
         this.estado = estado;
-        this.clienteId = clienteId;
+        this.codigoCliente = codigoCliente;
         this.importe = importe;
+        this.timestamp = Instant.now();
+        this.origen = "gdpd-pedidos-api";
     }
 
     public String getPedidoId() { return pedidoId; }
@@ -26,8 +31,12 @@ public class PedidoEvent implements Serializable {
     public void setTipo(String tipo) { this.tipo = tipo; }
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
-    public String getClienteId() { return clienteId; }
-    public void setClienteId(String clienteId) { this.clienteId = clienteId; }
-    public Double getImporte() { return importe; }
-    public void setImporte(Double importe) { this.importe = importe; }
+    public String getCodigoCliente() { return codigoCliente; }
+    public void setCodigoCliente(String codigoCliente) { this.codigoCliente = codigoCliente; }
+    public BigDecimal getImporte() { return importe; }
+    public void setImporte(BigDecimal importe) { this.importe = importe; }
+    public Instant getTimestamp() { return timestamp; }
+    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+    public String getOrigen() { return origen; }
+    public void setOrigen(String origen) { this.origen = origen; }
 }
