@@ -1,0 +1,859 @@
+openapi: 3.0.0
+info:
+  title: GDPD Pedidos API
+  description: |
+    API para la Gestión de Pedidos - Sistema central para administración de pedidos en NOVA COSMOS BBVA.
+    Incluye operaciones CRUD completas, consultas avanzadas y notificaciones en tiempo real via SSE.
+  version: 1.0.0
+  contact:
+    name: GDPD Team
+    email: gdpd@bbva.com
+  license:
+    name: BBVA Internal
+    url: https://www.bbva.com
+
+servers:
+  - url: http://localhost:8080/api/pedidos
+    description: Local development server
+  - url: http://gdpd-pedidos-api:8080/api/pedidos
+    description: Internal development environment
+  - url: https://api-int.nova/gdpd/pedidos
+    description: Integration environment
+  - url: https://api-pre.nova/gdpd/pedidos
+    description: Pre-production environment
+  - url: https://api.nova/gdpd/pedidos
+    description: Production environment
+
+paths:
+  /:
+    get:
+      summary: Obtener lista de pedidos con filtros
+      operationId: listPedidos
+      tags:
+        - Pedidos
+      parameters:
+        - name: estado
+          in: query
+          description: Filtrar por estado del pedido
+          required: false
+          schema:
+            type: string
+            enum: [PENDIENTE, CONFIRMADO, ENVIADO, ENTREGADO, CANCELADO]
+        - name: cliente_id
+          in: query
+          description: Filtrar por cliente
+          required: false
+          schema:
+            type: string
+        - name: fecha_desde
+          in: query
+          description: Filtrar por fecha de creación (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: fecha_hasta
+          in: query
+          description: Filtrar por fecha de creación (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          description: Número de página (0-indexed)
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          description: Tamaño de página
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista de pedidos recuperada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Crear un nuevo pedido
+      operationId: crearPedido
+      tags:
+        - Pedidos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearPedidoRequest'
+            examples:
+              simple:
+                summary: Ejemplo simple
+                value:
+                  cliente_id: "CLI-001"
+                  referencia_externa: "REF-2024-001"
+                  lineas:
+                    - codigo_producto: "PROD-001"
+                      descripcion: "Producto A"
+                      cantidad: 5
+                      precio_unitario: 100.00
+                      iva_porcentaje: 21
+              complejo:
+                summary: Ejemplo con datos completos
+                value:
+                  cliente_id: "CLI-002"
+                  referencia_externa: "REF-2024-002"
+                  fecha_entrega_solicitada: "2024-07-15"
+                  notas: "Entrega urgente"
+                  lineas:
+                    - codigo_producto: "PROD-002"
+                      descripcion: "Producto B"
+                      cantidad: 10
+                      precio_unitario: 50.00
+                      iva_porcentaje: 21
+                    - codigo_producto: "PROD-003"
+                      descripcion: "Producto C"
+                      cantidad: 3
+                      precio_unitario: 200.00
+                      iva_porcentaje: 21
+      responses:
+        '201':
+          description: Pedido creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{pedido_id}:
+    get:
+      summary: Obtener detalle de un pedido
+      operationId: obtenerPedido
+      tags:
+        - Pedidos
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del pedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Actualizar un pedido
+      operationId: actualizarPedido
+      tags:
+        - Pedidos
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarPedidoRequest'
+      responses:
+        '200':
+          description: Pedido actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PedidoDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Cancelar un pedido
+      operationId: cancelarPedido
+      tags:
+        - Pedidos
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motivo:
+                  type: string
+                  description: Motivo de la cancelación
+      responses:
+        '204':
+          description: Pedido cancelado exitosamente
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{pedido_id}/lineas:
+    post:
+      summary: Agregar línea a un pedido existente
+      operationId: agregarLineaPedido
+      tags:
+        - Líneas de Pedido
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearLineaRequest'
+      responses:
+        '201':
+          description: Línea agregada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineaPedidoDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Actualizar línea de pedido
+      operationId: actualizarLineaPedido
+      tags:
+        - Líneas de Pedido
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+        - name: linea_id
+          in: query
+          description: ID de la línea
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineaPedidoDTO'
+      responses:
+        '200':
+          description: Línea actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineaPedidoDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Eliminar línea de pedido
+      operationId: eliminarLineaPedido
+      tags:
+        - Líneas de Pedido
+      parameters:
+        - name: pedido_id
+          in: path
+          description: ID del pedido
+          required: true
+          schema:
+            type: string
+        - name: linea_id
+          in: query
+          description: ID de la línea
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Línea eliminada exitosamente
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /eventos:
+    get:
+      summary: Stream de eventos SSE para cambios en pedidos
+      operationId: streamEventosPedidos
+      tags:
+        - Eventos
+      parameters:
+        - name: cliente_id
+          in: query
+          description: Filtrar eventos por cliente (opcional)
+          required: false
+          schema:
+            type: string
+        - name: tipos_evento
+          in: query
+          description: Filtrar por tipos de evento (puede repetirse)
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [CREADO, ACTUALIZADO, ENVIADO, ENTREGADO, CANCELADO, ERROR]
+      responses:
+        '200':
+          description: Stream de eventos SSE
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/EventoPedidoSSE'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /estadisticas:
+    get:
+      summary: Obtener estadísticas de pedidos
+      operationId: obtenerEstadisticas
+      tags:
+        - Analítica
+      parameters:
+        - name: fecha_desde
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: fecha_hasta
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Estadísticas de pedidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadisticasPedidos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health:
+    get:
+      summary: Health check del servicio
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [UP, DOWN]
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    PedidoDTO:
+      type: object
+      description: Objeto de transferencia de datos para un pedido completo
+      required:
+        - id
+        - cliente_id
+        - estado
+        - fecha_creacion
+        - lineas
+        - importe_total
+      properties:
+        id:
+          type: string
+          description: ID único del pedido
+          example: "PED-2024-000001"
+        cliente_id:
+          type: string
+          description: ID del cliente
+          example: "CLI-001"
+        referencia_externa:
+          type: string
+          description: Referencia externa del cliente
+          example: "REF-2024-001"
+        estado:
+          type: string
+          enum: [PENDIENTE, CONFIRMADO, ENVIADO, ENTREGADO, CANCELADO]
+          example: CONFIRMADO
+        fecha_creacion:
+          type: string
+          format: date-time
+          description: Fecha de creación del pedido
+          example: "2024-06-09T10:30:00Z"
+        fecha_ultima_modificacion:
+          type: string
+          format: date-time
+          description: Fecha de última modificación
+          example: "2024-06-09T14:30:00Z"
+        fecha_entrega_solicitada:
+          type: string
+          format: date
+          description: Fecha de entrega solicitada
+          nullable: true
+          example: "2024-06-20"
+        fecha_entrega_real:
+          type: string
+          format: date-time
+          description: Fecha de entrega real
+          nullable: true
+        lineas:
+          type: array
+          description: Líneas del pedido
+          items:
+            $ref: '#/components/schemas/LineaPedidoDTO'
+        importe_subtotal:
+          type: number
+          format: decimal
+          description: Importe subtotal (sin IVA)
+          example: 1000.00
+        importe_iva:
+          type: number
+          format: decimal
+          description: Total de IVA
+          example: 210.00
+        importe_total:
+          type: number
+          format: decimal
+          description: Importe total (con IVA)
+          example: 1210.00
+        notas:
+          type: string
+          description: Notas sobre el pedido
+          nullable: true
+          example: "Entrega urgente"
+        usuario_creacion:
+          type: string
+          description: Usuario que creó el pedido
+          example: "user.name@bbva.com"
+        usuario_ultima_modificacion:
+          type: string
+          description: Usuario que realizó la última modificación
+          nullable: true
+
+    LineaPedidoDTO:
+      type: object
+      description: Línea individual de un pedido
+      required:
+        - id
+        - codigo_producto
+        - descripcion
+        - cantidad
+        - precio_unitario
+        - iva_porcentaje
+        - importe_total
+      properties:
+        id:
+          type: string
+          description: ID único de la línea
+          example: "LIN-001"
+        codigo_producto:
+          type: string
+          description: Código del producto
+          example: "PROD-001"
+        descripcion:
+          type: string
+          description: Descripción del producto
+          example: "Producto A"
+        cantidad:
+          type: integer
+          minimum: 1
+          description: Cantidad de unidades
+          example: 5
+        precio_unitario:
+          type: number
+          format: decimal
+          description: Precio unitario sin IVA
+          example: 100.00
+        iva_porcentaje:
+          type: number
+          format: decimal
+          description: Porcentaje de IVA
+          minimum: 0
+          maximum: 100
+          example: 21
+        importe_subtotal:
+          type: number
+          format: decimal
+          description: Importe subtotal (cantidad × precio_unitario)
+          example: 500.00
+        importe_iva:
+          type: number
+          format: decimal
+          description: Importe total de IVA
+          example: 105.00
+        importe_total:
+          type: number
+          format: decimal
+          description: Importe total (subtotal + IVA)
+          example: 605.00
+        notas_linea:
+          type: string
+          description: Notas adicionales de la línea
+          nullable: true
+
+    CrearPedidoRequest:
+      type: object
+      description: Request para crear un nuevo pedido
+      required:
+        - cliente_id
+        - lineas
+      properties:
+        cliente_id:
+          type: string
+          description: ID del cliente
+          example: "CLI-001"
+        referencia_externa:
+          type: string
+          description: Referencia externa del cliente
+          nullable: true
+          example: "REF-2024-001"
+        fecha_entrega_solicitada:
+          type: string
+          format: date
+          description: Fecha de entrega solicitada
+          nullable: true
+          example: "2024-06-20"
+        notas:
+          type: string
+          description: Notas sobre el pedido
+          nullable: true
+          example: "Entrega urgente"
+        lineas:
+          type: array
+          minItems: 1
+          description: Líneas del pedido
+          items:
+            $ref: '#/components/schemas/CrearLineaRequest'
+
+    CrearLineaRequest:
+      type: object
+      description: Request para crear una línea de pedido
+      required:
+        - codigo_producto
+        - descripcion
+        - cantidad
+        - precio_unitario
+        - iva_porcentaje
+      properties:
+        codigo_producto:
+          type: string
+          description: Código del producto
+          example: "PROD-001"
+        descripcion:
+          type: string
+          description: Descripción del producto
+          example: "Producto A"
+        cantidad:
+          type: integer
+          minimum: 1
+          description: Cantidad de unidades
+          example: 5
+        precio_unitario:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Precio unitario sin IVA
+          example: 100.00
+        iva_porcentaje:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 100
+          description: Porcentaje de IVA
+          example: 21
+        notas_linea:
+          type: string
+          description: Notas adicionales
+          nullable: true
+
+    ActualizarPedidoRequest:
+      type: object
+      description: Request para actualizar un pedido existente
+      properties:
+        estado:
+          type: string
+          enum: [PENDIENTE, CONFIRMADO, ENVIADO, ENTREGADO, CANCELADO]
+          description: Nuevo estado del pedido
+        fecha_entrega_solicitada:
+          type: string
+          format: date
+          description: Nueva fecha de entrega solicitada
+          nullable: true
+        notas:
+          type: string
+          description: Nuevas notas
+          nullable: true
+
+    EventoPedidoSSE:
+      type: object
+      description: Evento SSE para cambios en pedidos
+      properties:
+        event:
+          type: string
+          description: Tipo de evento
+          enum: [CREADO, ACTUALIZADO, ENVIADO, ENTREGADO, CANCELADO, ERROR]
+        data:
+          type: object
+          description: Datos del evento
+          properties:
+            pedido_id:
+              type: string
+              example: "PED-2024-000001"
+            cliente_id:
+              type: string
+              example: "CLI-001"
+            evento_tipo:
+              type: string
+              example: "ACTUALIZADO"
+            timestamp:
+              type: string
+              format: date-time
+              example: "2024-06-09T10:30:00Z"
+            detalles:
+              type: object
+              description: Detalles adicionales del evento
+
+    PedidoListResponse:
+      type: object
+      description: Respuesta paginada de lista de pedidos
+      properties:
+        contenido:
+          type: array
+          items:
+            $ref: '#/components/schemas/PedidoDTO'
+        numero_pagina:
+          type: integer
+          example: 0
+        tamaño_pagina:
+          type: integer
+          example: 20
+        total_elementos:
+          type: integer
+          example: 100
+        total_paginas:
+          type: integer
+          example: 5
+        es_ultima_pagina:
+          type: boolean
+          example: false
+
+    EstadisticasPedidos:
+      type: object
+      description: Estadísticas agregadas de pedidos
+      properties:
+        total_pedidos:
+          type: integer
+          example: 150
+        pedidos_por_estado:
+          type: object
+          properties:
+            PENDIENTE:
+              type: integer
+              example: 30
+            CONFIRMADO:
+              type: integer
+              example: 50
+            ENVIADO:
+              type: integer
+              example: 40
+            ENTREGADO:
+              type: integer
+              example: 25
+            CANCELADO:
+              type: integer
+              example: 5
+        importe_total:
+          type: number
+          format: decimal
+          example: 50000.00
+        importe_promedio:
+          type: number
+          format: decimal
+          example: 333.33
+        clientes_unicos:
+          type: integer
+          example: 45
+        periodo:
+          type: object
+          properties:
+            fecha_inicio:
+              type: string
+              format: date
+            fecha_fin:
+              type: string
+              format: date
+
+    ErrorResponse:
+      type: object
+      description: Response de error estándar
+      required:
+        - codigo
+        - mensaje
+      properties:
+        codigo:
+          type: string
+          description: Código de error
+          example: "GDPD-001"
+        mensaje:
+          type: string
+          description: Descripción del error
+          example: "El pedido no existe"
+        detalles:
+          type: object
+          description: Detalles adicionales del error
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp del error
+          example: "2024-06-09T10:30:00Z"
+
+  responses:
+    BadRequest:
+      description: Solicitud inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: No autorizado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflicto (e.g., intento de cambio de estado inválido)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para autenticación
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Pedidos
+    description: Operaciones CRUD para pedidos
+  - name: Líneas de Pedido
+    description: Operaciones con líneas individuales de pedidos
+  - name: Eventos
+    description: Streaming de eventos en tiempo real
+  - name: Analítica
+    description: Reportes y estadísticas
+  - name: System
+    description: Operaciones del sistema

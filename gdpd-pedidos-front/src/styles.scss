@@ -1,0 +1,48 @@
+/* BBVA corporate variables */
+:root {
+  --bbva-navy: #004481;
+  --bbva-sky: #1973B8;
+  --bbva-white: #ffffff;
+  --bbva-gray-100: #f4f4f4;
+  --bbva-gray-300: #d3d3d3;
+  --bbva-gray-600: #666666;
+  --bbva-green: #048A24;
+  --bbva-red: #DA3851;
+  --bbva-orange: #F5A623;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Benton Sans', Arial, sans-serif;
+  font-size: 14px;
+  color: #333333;
+  background-color: var(--bbva-gray-100);
+}
+
+a {
+  color: var(--bbva-sky);
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Estado badges */
+.estado--pendiente    { color: var(--bbva-orange); font-weight: 600; }
+.estado--confirmado   { color: var(--bbva-sky);    font-weight: 600; }
+.estado--en_proceso   { color: var(--bbva-navy);   font-weight: 600; }
+.estado--enviado      { color: var(--bbva-green);  font-weight: 600; }
+.estado--entregado    { color: var(--bbva-green);  font-weight: 600; }
+.estado--cancelado    { color: var(--bbva-red);    font-weight: 600; }
