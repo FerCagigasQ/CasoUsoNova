@@ -1,0 +1,35 @@
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+.app-header {
+  background-color: #004481;
+  color: #fff;
+  padding: 0 24px;
+  height: 56px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title { font-size: 18px; font-weight: 600; }
+
+nav a {
+  color: rgba(255,255,255,0.85);
+  margin-left: 24px;
+  font-size: 14px;
+}
+nav a.active, nav a:hover { color: #fff; text-decoration: underline; }
+
+.app-main {
+  flex: 1;
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
