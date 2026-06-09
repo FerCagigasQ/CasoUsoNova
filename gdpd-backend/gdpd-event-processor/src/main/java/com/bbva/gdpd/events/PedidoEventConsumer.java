@@ -14,7 +14,7 @@ public class PedidoEventConsumer {
     private static final Logger log = LoggerFactory.getLogger(PedidoEventConsumer.class);
 
     @Bean
-    public Consumer<PedidoEvent> pedidosIn() {
+    public Consumer<PedidoEvent> pedidosInput() {
         return evento -> {
             log.info("Evento recibido: pedidoId={} tipo={} estado={}",
                      evento.getPedidoId(), evento.getTipo(), evento.getEstado());
@@ -27,9 +27,9 @@ public class PedidoEventConsumer {
     }
 
     @Bean
-    public Consumer<PedidoEvent> pedidosInDlq() {
+    public Consumer<PedidoEvent> pedidosInputDlq() {
         return evento -> {
-            log.warn("Mensaje en DLQ pedidos.eventos.dlq: {}", evento);
+            log.warn("Mensaje en DLQ pedidos-events.DLQ: {}", evento);
             registrarAuditoria(evento);
         };
     }

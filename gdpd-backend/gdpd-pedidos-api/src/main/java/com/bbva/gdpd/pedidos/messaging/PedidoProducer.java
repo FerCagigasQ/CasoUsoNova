@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class PedidoProducer {
 
     private static final Logger log = LoggerFactory.getLogger(PedidoProducer.class);
-    private static final String BINDING = "pedidos-out-0";
+    private static final String BINDING = "pedidosOutput-out-0";
 
     private final StreamBridge streamBridge;
 

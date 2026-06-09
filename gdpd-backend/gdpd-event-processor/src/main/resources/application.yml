@@ -22,23 +22,23 @@ spring:
     config:
       enabled: false
     function:
-      definition: pedidosIn;pedidosInDlq
+      definition: pedidosInput;pedidosInputDlq
     stream:
       bindings:
-        pedidosIn-in-0:
-          destination: pedidos.eventos
+        pedidosInput-in-0:
+          destination: pedidos-events
           group: gdpd-event-processor
           content-type: application/json
-        pedidosInDlq-in-0:
-          destination: pedidos.eventos.dlq
+        pedidosInputDlq-in-0:
+          destination: pedidos-events.DLQ
           group: gdpd-event-processor-dlq
           content-type: application/json
       rabbit:
         bindings:
-          pedidosIn-in-0:
+          pedidosInput-in-0:
             consumer:
               auto-bind-dlq: true
-              dlq-name: pedidos.eventos.dlq
+              dlq-name: pedidos-events.DLQ
               republish-to-dlq: true
               requeue-rejected: false
               max-attempts: 3
@@ -57,7 +57,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:
@@ -80,10 +83,10 @@ spring:
     stream:
       rabbit:
         bindings:
-          pedidosIn-in-0:
+          pedidosInput-in-0:
             consumer:
               auto-bind-dlq: true
-              dlq-name: pedidos.eventos.dlq
+              dlq-name: pedidos-events.DLQ
               republish-to-dlq: true
               requeue-rejected: false
               max-attempts: 3

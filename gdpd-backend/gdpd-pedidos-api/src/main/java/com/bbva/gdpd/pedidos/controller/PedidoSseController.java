@@ -21,7 +21,7 @@ public class PedidoSseController {
     private static final Logger log = LoggerFactory.getLogger(PedidoSseController.class);
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
-    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/eventos", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe() {
         String key = UUID.randomUUID().toString();
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);

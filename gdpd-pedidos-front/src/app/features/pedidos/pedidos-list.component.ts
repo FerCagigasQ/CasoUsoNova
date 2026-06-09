@@ -18,7 +18,7 @@ export class PedidosListComponent implements OnInit, OnDestroy {
   sseError: string | null = null;
 
   private eventSource: EventSource | null = null;
-  readonly SSE_URL = '/api/pedidos/events';
+  readonly SSE_URL = '/api/pedidos/eventos';
 
   constructor(private pedidosApi: GdpdPedidosService) {}
 
