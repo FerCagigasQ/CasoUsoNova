@@ -1,0 +1,84 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gdpd-pedidos-api
+  datasource:
+    url: jdbc:postgresql://localhost:5432/novadb
+    username: nova
+    password: nova
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  cloud:
+    config:
+      enabled: false
+    stream:
+      bindings:
+        pedidosOutput-out-0:
+          destination: pedidos-events
+          content-type: application/json
+      rabbit:
+        bindings:
+          pedidosOutput-out-0:
+            producer:
+              auto-bind-dlq: true
+              republish-to-dlq: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.bbva.gdpd: DEBUG
+    org.springframework.cloud.stream: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pro
+  rabbitmq:
+    host: rabbitmq-cluster.nova.internal
+    port: 5672
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}
+    virtual-host: /nova
+    connection-timeout: 5000
+  cloud:
+    stream:
+      bindings:
+        pedidosOutput-out-0:
+          destination: pedidos-events
+          content-type: application/json
+      rabbit:
+        bindings:
+          pedidosOutput-out-0:
+            producer:
+              auto-bind-dlq: true
+              republish-to-dlq: true
+              delivery-mode: PERSISTENT

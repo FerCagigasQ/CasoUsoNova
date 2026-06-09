@@ -1,0 +1,30 @@
+<div class="pedido-create">
+  <bbva-web-button (click)="cancel()">Volver</bbva-web-button>
+  <h1>Nuevo Pedido</h1>
+  <bbva-web-card>
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div *ngIf="error" class="form-error">{{ error }}</div>
+      <bbva-web-form-field label="Cliente ID">
+        <input type="text" formControlName="clienteId" class="form-input" />
+      </bbva-web-form-field>
+      <span *ngIf="form.get('clienteId')?.invalid && form.get('clienteId')?.touched" class="field-error">Obligatorio</span>
+      <bbva-web-form-field label="Observaciones">
+        <textarea formControlName="observaciones" rows="2" class="form-input"></textarea>
+      </bbva-web-form-field>
+      <bbva-web-form-field label="Producto ID">
+        <input type="text" formControlName="productoId" class="form-input" />
+      </bbva-web-form-field>
+      <span *ngIf="form.get('productoId')?.invalid && form.get('productoId')?.touched" class="field-error">Obligatorio</span>
+      <bbva-web-form-field label="Cantidad">
+        <input type="number" formControlName="cantidad" min="1" class="form-input" />
+      </bbva-web-form-field>
+      <bbva-web-form-field label="Precio Unitario (EUR)">
+        <input type="number" formControlName="precioUnitario" min="0" step="0.01" class="form-input" />
+      </bbva-web-form-field>
+      <div class="form-actions">
+        <bbva-web-button type="button" (click)="cancel()">Cancelar</bbva-web-button>
+        <bbva-web-button type="submit">{{ submitting ? 'Creando...' : 'Crear Pedido' }}</bbva-web-button>
+      </div>
+    </form>
+  </bbva-web-card>
+</div>

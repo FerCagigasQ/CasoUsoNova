@@ -1,0 +1,124 @@
+asyncapi: "2.6.0"
+info:
+  title: GDPD Pedidos Async API
+  version: "1.0.0"
+  description: |
+    Comunicacion asincrona del producto GDPD (Gestion de Pedidos Distribuida).
+    Back-to-Back via RabbitMQ/Spring Cloud Stream.
+    Back-to-Front via Server-Sent Events (SSE).
+
+servers:
+  development:
+    url: localhost:5672
+    protocol: amqp
+    description: RabbitMQ local (dev)
+  production:
+    url: rabbitmq-cluster.nova.internal:5672
+    protocol: amqp
+    description: RabbitMQ cluster (pro)
+
+channels:
+  pedidos-events:
+    description: Canal de eventos de pedidos (Back-to-Back)
+    publish:
+      operationId: publicarEventoPedido
+      summary: gdpd-pedidos-api publica eventos de ciclo de vida de pedidos
+      bindings:
+        amqp:
+          cc:
+            - pedidosOutput-out-0
+      message:
+        $ref: "#/components/messages/PedidoEvent"
+    subscribe:
+      operationId: recibirEventoPedido
+      summary: gdpd-event-processor consume eventos del canal pedidosInput-in-0
+      bindings:
+        amqp:
+          cc:
+            - pedidosInput-in-0
+      message:
+        $ref: "#/components/messages/PedidoEvent"
+
+  pedidos-events.DLQ:
+    description: Dead Letter Queue — mensajes fallidos tras maxAttempts=3
+    subscribe:
+      operationId: recibirEventoDLQ
+      summary: gdpd-event-processor consume mensajes fallidos para auditoria
+      bindings:
+        amqp:
+          cc:
+            - pedidosInputDlq-in-0
+      message:
+        $ref: "#/components/messages/PedidoEvent"
+
+  /api/pedidos/eventos:
+    description: Canal SSE Back-to-Front — notificaciones en tiempo real al frontal Angular
+    subscribe:
+      operationId: suscribirEventosSSE
+      summary: >
+        El frontal Angular se suscribe via EventSource para recibir actualizaciones
+        de pedidos sin polling.
+      message:
+        $ref: "#/components/messages/PedidoEventSSE"
+
+components:
+  messages:
+    PedidoEvent:
+      name: PedidoEvent
+      title: Evento de Pedido (Broker)
+      contentType: application/json
+      payload:
+        $ref: "#/components/schemas/PedidoEvent"
+    PedidoEventSSE:
+      name: PedidoEventSSE
+      title: Evento SSE de Pedido
+      contentType: application/json
+      headers:
+        type: object
+        properties:
+          event:
+            type: string
+            description: Nombre del evento SSE
+            example: pedido-evento
+          id:
+            type: string
+            description: UUID del evento
+          retry:
+            type: integer
+            description: Tiempo de reconexion en ms
+            example: 5000
+      payload:
+        $ref: "#/components/schemas/PedidoEvent"
+
+  schemas:
+    PedidoEvent:
+      type: object
+      required:
+        - pedidoId
+        - tipo
+      properties:
+        pedidoId:
+          type: string
+          description: Identificador unico del pedido
+          example: "PED-001"
+        tipo:
+          type: string
+          description: Tipo de evento de ciclo de vida
+          enum:
+            - CREACION
+            - ACTUALIZACION_ESTADO
+            - ELIMINACION
+          example: "CREACION"
+        estado:
+          type: string
+          description: Estado actual del pedido (presente en ACTUALIZACION_ESTADO)
+          example: "PROCESANDO"
+        origen:
+          type: string
+          description: Servicio que origino el evento
+          example: "gdpd-pedidos-api"
+        timestamp:
+          type: string
+          format: date-time
+          description: Marca temporal del evento
+          example: "2026-06-09T10:30:00Z"
