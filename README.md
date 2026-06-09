@@ -1,98 +1,249 @@
-# CasoUsoNova — Producto NOVA "Gestión de Pedidos" (GDPD)
+# Gestión de Pedidos — Producto NOVA (UUAA: GDPD)
 
-> Producto NOVA desarrollado por 7 agentes autónomos (Claude) colaborando
-> a través de [Paperclip](https://github.com/PaperclipAI/paperclip).
+> Producto empresarial para la gestión completa del ciclo de vida de pedidos:
+> creación, procesamiento, notificaciones en tiempo real y generación de reportes.
 
-## NOVA Toolchain
+---
 
-Este repo incluye el toolchain NOVA completo para operar:
+## Visión General
 
-```bash
-# Configurar entorno NOVA
-source setup-nova.sh
-
-# Verificar CLI
-nova --version
-# → NOVA 26.03, CLI 7.8.0
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PRODUCTO GDPD                                        │
+│                   "Gestión de Pedidos"                                       │
+│                                                                             │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                     SUBSISTEMA BACKEND                             │    │
+│   │                                                                    │    │
+│   │  ┌──────────────┐  ┌───────────────┐  ┌────────┐  ┌───────────┐  │    │
+│   │  │  API REST    │  │   Demonio     │  │ Batch  │  │ Scheduler │  │    │
+│   │  │              │  │               │  │        │  │           │  │    │
+│   │  │ CRUD pedidos │  │ Procesador de │  │ Report │  │ Cron jobs │  │    │
+│   │  │ Swagger/OAS  │  │ eventos       │  │ genera │  │ orquesta  │  │    │
+│   │  │ Spring Boot  │  │ Spring Cloud  │  │ Spring │  │ lanza     │  │    │
+│   │  │              │  │ Stream        │  │ Batch  │  │ batches   │  │    │
+│   │  └──────┬───────┘  └───────┬───────┘  └────┬───┘  └─────┬─────┘  │    │
+│   │         │                  │               │            │         │    │
+│   └─────────┼──────────────────┼───────────────┼────────────┼─────────┘    │
+│             │                  │               │            │              │
+│   ┌─────────┼──────────────────┼───────────────┼────────────┼─────────┐    │
+│   │         ▼                  ▼               ▼            ▼         │    │
+│   │              INFRAESTRUCTURA DE COMUNICACIÓN                       │    │
+│   │                                                                    │    │
+│   │  ┌──────────────────┐  ┌──────────────┐  ┌────────────────────┐  │    │
+│   │  │   API Gateway    │  │   Broker     │  │  Config Server     │  │    │
+│   │  │   Enrutamiento   │  │  (ActiveMQ)  │  │  Configuración     │  │    │
+│   │  │   + Seguridad    │  │  Eventos     │  │  centralizada      │  │    │
+│   │  └────────┬─────────┘  └──────────────┘  └────────────────────┘  │    │
+│   │           │                                                       │    │
+│   └───────────┼───────────────────────────────────────────────────────┘    │
+│               │                                                             │
+│   ┌───────────┼───────────────────────────────────────────────────────┐    │
+│   │           ▼          SUBSISTEMA FRONTEND                          │    │
+│   │                                                                    │    │
+│   │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐    │    │
+│   │  │ Lista        │  │ Detalle      │  │ Crear/Editar         │    │    │
+│   │  │ Pedidos      │  │ Pedido       │  │ Pedido               │    │    │
+│   │  │ (tabla)      │  │ (card)       │  │ (formulario)         │    │    │
+│   │  └──────────────┘  └──────────────┘  └──────────────────────┘    │    │
+│   │                                                                    │    │
+│   │  Routing: /pedidos  ·  /pedidos/:id  ·  /pedidos/nuevo            │    │
+│   │  Componentes corporativos  ·  Notificaciones SSE en tiempo real   │    │
+│   │                                                                    │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Comandos NOVA CLI principales
+---
 
-| Comando | Descripción |
-|---------|-------------|
-| `nova create api` | Servicio API REST (Java 11, Spring Boot 2.7.18) |
-| `nova create demon` | Demonio event-driven (JMS/ActiveMQ) |
-| `nova create batch` | Job Spring Batch (Reader/Processor/Writer) |
-| `nova create scheduler` | Scheduler con cron (scheduler.yml) |
-| `nova create frontal` | Frontal Angular/Thin3 (CDN) |
-| `nova generate-api-code` | Código cliente desde Swagger |
-| `nova validate` | Validar servicios antes de release |
-| `nova runtime start all` | Levantar runtime local completo |
-| `nova runtime status` | Estado de los servicios |
+## Arquitectura de Servicios
 
-### Runtime local (puertos)
+### Backend (`gdpd-backend/`)
 
-| Servicio | Puerto |
-|----------|--------|
-| PostgreSQL | :5555 |
-| API Gateway | :24000 |
-| Config Server | :8888 |
-| WebSeal Mock | :23000 |
-| ActiveMQ | :8161 |
-| CES Mock | :36000 |
+| Servicio | Tipo | Responsabilidad |
+|----------|------|-----------------|
+| `gdpd-pedidos-api` | API REST | Endpoints CRUD de pedidos. Publica Swagger/OpenAPI. Registrado en Eureka. |
+| `gdpd-event-processor` | Demonio | Consume eventos del broker. Procesa cambios de estado de pedidos. Sin endpoints HTTP. |
+| `gdpd-report-batch` | Batch | Genera reportes periódicos. Lógica Reader → Processor → Writer. |
+| `gdpd-report-scheduler` | Scheduler | Orquesta la ejecución de batches mediante cron. |
 
-## Estructura del repo
+**Stack**: Java 11 · Spring Boot 2.7 · Maven 3.8
+
+> Los servicios se generan mediante **NOVA CLI**. El API requiere definir su contrato OpenAPI.
+
+### Frontend (`gdpd-frontend/`)
+
+| Vista | Descripción |
+|-------|-------------|
+| Lista de pedidos | Tabla con filtros, paginación y acciones |
+| Detalle de pedido | Card con información completa + historial de estados |
+| Crear/Editar pedido | Formulario con validaciones |
+
+**Stack**: Angular 12+ · Componentes corporativos (tabla, form, card) · Lazy loading
+
+> El frontal se genera con **NOVA CLI** y utiliza componentes del catálogo corporativo.
+> Requiere código cliente generado a partir del Swagger del API para comunicarse con el backend.
+
+---
+
+## Comunicación entre Servicios
+
+```
+┌──────────────┐         ┌─────────────────┐         ┌──────────────────┐
+│              │  HTTP    │                 │  HTTP    │                  │
+│   Frontend   │────────►│   API Gateway   │────────►│   API REST       │
+│              │         │                 │         │   (pedidos)      │
+└──────┬───────┘         └─────────────────┘         └────────┬─────────┘
+       │                                                       │
+       │  SSE (Server-Sent Events)                            │  Publica evento
+       │◄─────────────────────────────────────────────────────┤
+       │  Notificaciones en tiempo real                       │
+       │                                                       ▼
+       │                                              ┌──────────────────┐
+       │                                              │     Broker       │
+       │                                              │    (ActiveMQ)    │
+       │                                              │                  │
+       │                                              └────────┬─────────┘
+       │                                                       │
+       │                                                       │  Consume evento
+       │                                                       ▼
+       │                                              ┌──────────────────┐
+       │                                              │    Demonio       │
+       │                                              │  (event-proc.)  │
+       │                                              └──────────────────┘
+```
+
+### Patrones de comunicación
+
+| Patrón | Origen → Destino | Mecanismo |
+|--------|-----------------|-----------|
+| Síncrono | Frontend → API | HTTP REST vía API Gateway |
+| Back-to-Back | API → Demonio | Broker de mensajería (canal de eventos) |
+| Back-to-Front | API → Frontend | SSE (Server-Sent Events) para notificaciones en tiempo real |
+
+> La comunicación asíncrona requiere configuración de **NOVA CLI** para el broker,
+> definición de canales, y especificación AsyncAPI.
+> También se necesita generar código cliente tanto para el backend (Java) como para el frontend (TypeScript).
+
+---
+
+## Integración y API Gateway
+
+```
+                    ┌─────────────────────────────────────────┐
+                    │           API GATEWAY                    │
+                    │                                         │
+  Frontend ──────►  │   /SHIVA/GDPD/pedidos-api/v1/*         │  ──────► API REST
+                    │                                         │
+  (WebSeal) ─────►  │   Autenticación + Routing              │
+                    │                                         │
+                    └─────────────────────────────────────────┘
+```
+
+- **Código cliente generado**: A partir del Swagger del API se generan clientes Java (para servicios backend) y TypeScript (para el frontal)
+- **Mock Server**: Para desarrollo independiente del frontal sin depender del backend real
+- **Registro de rutas**: El API se registra en el gateway con su ruta corporativa
+
+> La generación de código cliente y el registro en gateway se realizan con **NOVA CLI**.
+
+---
+
+## Runtime Local
+
+Para desarrollo y testing, el entorno local levanta todos los servicios de infraestructura:
+
+| Servicio | Puerto | Función |
+|----------|--------|---------|
+| PostgreSQL | :5555 | Base de datos |
+| API Gateway | :24000 | Enrutamiento |
+| Config Server | :8888 | Configuración centralizada |
+| WebSeal Mock | :23000 | Simulación de autenticación |
+| ActiveMQ | :8161 | Broker de mensajería |
+| CES Mock | :36000 | Simulación de servicios externos |
+
+> El runtime local completo se gestiona con **NOVA CLI**.
+
+---
+
+## Calidad y Despliegue
+
+### Quality Gates
+
+Antes de cada release se validan:
+- Análisis estático (SonarQube)
+- Cobertura de tests mínima
+- Escaneo de seguridad
+- Validación de servicios NOVA
+
+### Flujo de entornos
+
+```
+┌─────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   LOCAL     │      │   INTEGRADO     │      │  PREPRODUCCIÓN  │      ┌────────────┐
+│  (Desarro-  │─────►│     (INT)       │─────►│     (PRE)       │─────►│ PRODUCCIÓN │
+│   llo)      │      │                 │      │                 │      │   (PRO)    │
+└─────────────┘      └─────────────────┘      └─────────────────┘      └────────────┘
+                          │                        │                         │
+                     Tests de                 Tests E2E              Aprobación
+                     integración              + Carga                manual
+                     + Quality Gate           + Quality Gate         + Quality Gate
+```
+
+> La validación de servicios antes de release se ejecuta con **NOVA CLI**.
+
+---
+
+## Monitorización y Operaciones
+
+| Aspecto | Detalle |
+|---------|---------|
+| Health checks | Endpoints Actuator `/health`, `/metrics`, `/info` por servicio |
+| Alertas | Reglas por servicio (latencia, errores, disponibilidad) |
+| Logs | Eventos centralizados con trazabilidad distribuida |
+| Transferencias | Ficheros entre sistemas (Xcom/ConnectDirect) |
+
+> La verificación del estado de los servicios en runtime se gestiona con **NOVA CLI**.
+
+---
+
+## Estructura objetivo del repositorio
 
 ```
 CasoUsoNova/
-├── README.md                     ← Este fichero
-├── DEMO-NOVA.md                  ← Guía paso a paso de la demo
-├── nova.yml                      ← Config del producto GDPD
-├── .paperclip.yaml               ← Config Paperclip: 7 agentes, roles, budgets
-├── .gitattributes                ← Git LFS para binarios del toolchain
-├── setup-nova.sh                 ← source setup-nova.sh para configurar env
-├── docker-compose.nova.yml       ← Paperclip + PostgreSQL para Docker
-│
-├── toolchain/                    ← NOVA CLI + runtime (Git LFS)
-│   ├── nova-le/                  ← NOVA Click 7.8.0
-│   │   ├── nova-cli/bin/nova.js  ← Entry point del CLI
-│   │   ├── generators/           ← Yeoman generators (api, demon, batch...)
-│   │   ├── tools/                ← Java, Maven, PostgreSQL, runtime JARs
-│   │   ├── nodejs/               ← Node.js 16 embebido
-│   │   └── configuration/        ← Templates (gateway, webseal, etc.)
-│   ├── zulu-jdk11/               ← Azul Zulu JDK 11.0.11
-│   └── prepare-apis-generated.js ← Script generación código cliente API
-│
-├── aprendizajes/                 ← 10 docs extraídos del análisis del CLI
-├── skills/                       ← 9 skills NOVA para agentes Paperclip
-├── agents/                       ← AGENTS.md de cada agente
-├── scripts/                      ← configure-nova-env.mjs, import-nova-company.mjs
-└── docs/                         ← Documentación del producto (arquitectura, etc.)
+├── README.md
+├── nova.yml                          ← Configuración raíz del producto
+├── docs/
+│   ├── arquitectura.md
+│   ├── integracion.md
+│   ├── async-communication.md
+│   ├── release-plan.md
+│   ├── deploy-checklist.md
+│   └── operations.md
+├── gdpd-backend/
+│   ├── gdpd-pedidos-api/             ← API REST (CRUD pedidos)
+│   ├── gdpd-event-processor/         ← Demonio (consumidor eventos)
+│   ├── gdpd-report-batch/            ← Batch (generación reportes)
+│   └── gdpd-report-scheduler/        ← Scheduler (cron)
+├── gdpd-frontend/
+│   └── gdpd-pedidos-front/           ← App Angular/Thin3
+├── api-generated/                    ← Código cliente (Java + TypeScript)
+├── gateway/                          ← Config API Gateway
+└── mock-server/                      ← Mocks para desarrollo
 ```
 
-## Los 7 agentes
+---
 
-| Agente | Rol | Descripción |
-|--------|-----|-------------|
-| `nova-architect` | CEO | Define arquitectura, delega, revisa PRs |
-| `nova-service-gen` | Engineer | Crea servicios backend con NOVA CLI |
-| `nova-frontend-gen` | Engineer | Crea frontales Angular/Thin3 |
-| `nova-api-integr` | Engineer | Genera código cliente, configura Gateway |
-| `nova-async-comm` | Engineer | Configura messaging asíncrono |
-| `nova-release-mgr` | Engineer | Gestiona releases y despliegues |
-| `nova-ops-monitor` | Engineer | Monitorización y operaciones |
-
-## Stack técnico
+## Datos del producto
 
 | Dato | Valor |
 |------|-------|
-| NOVA CLI | v7.8.0 (NOVA: 26.03) |
+| UUAA | GDPD |
+| Nombre | Gestión de Pedidos |
+| NOVA | 26.03 |
+| CLI | v7.8.0 |
 | Java | Azul Zulu JDK 11.0.11 |
 | Spring Boot | 2.7.18 |
+| Angular | 12+ |
+| Node.js | 16 |
 | Maven | 3.8 |
-| Angular | 12+ (generator-thin3 v7.5.0) |
-| Node.js | 16 (embebido en toolchain) |
-
-## Demo
-
-Consulta [DEMO-NOVA.md](DEMO-NOVA.md) para la guía completa paso a paso.
