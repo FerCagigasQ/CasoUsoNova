@@ -1,0 +1,91 @@
+// BBVA Corporate design tokens
+$bbva-navy: #004481;
+$bbva-sky: #1973b8;
+$bbva-aqua: #2dcccd;
+$bbva-coral: #f35b1c;
+$bbva-white: #ffffff;
+$bbva-light-grey: #f4f4f4;
+$bbva-mid-grey: #d3d3d3;
+$bbva-dark-grey: #666666;
+$bbva-text: #121212;
+
+// Global reset
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'BBVAMedium', Arial, sans-serif;
+  font-size: 16px;
+  color: $bbva-text;
+  background-color: $bbva-light-grey;
+}
+
+a {
+  color: $bbva-sky;
+  text-decoration: none;
+
+  &:hover {
+    color: $bbva-navy;
+    text-decoration: underline;
+  }
+}
+
+// bbva-web-* component host resets
+bbva-web-table,
+bbva-web-card,
+bbva-web-form-text-input,
+bbva-web-form-select,
+bbva-web-button-default {
+  display: block;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: $bbva-navy;
+    margin: 0 0 8px;
+  }
+
+  p {
+    color: $bbva-dark-grey;
+    margin: 0;
+  }
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.estado-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &--pendiente  { background: #fff3cd; color: #856404; }
+  &--procesando { background: #cce5ff; color: #004085; }
+  &--enviado    { background: #d4edda; color: #155724; }
+  &--entregado  { background: #d4edda; color: #155724; }
+  &--cancelado  { background: #f8d7da; color: #721c24; }
+}
