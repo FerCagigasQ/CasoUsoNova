@@ -1,0 +1,344 @@
+# Spring Boot Actuator Configuration for GDPD Services
+# Reference: https://spring.io/guides/gs/actuator-service/
+
+---
+# Configuración común a todos los servicios backend
+management:
+  # Endpoints expuestos
+  endpoints:
+    web:
+      exposure:
+        # Endpoints habilitados para monitorización
+        include: health,info,metrics,prometheus,env,loggers,threaddump,heapdump
+        # Excluir endpoints sensibles en producción
+        exclude: shutdown
+      # Base path para todos los endpoints
+      base-path: /actuator
+      # CORS para dashboards remoto
+      cors:
+        allowed-origins: "http://localhost:3000,http://localhost:4200"
+        allowed-methods: GET,POST
+
+  # Configuración del endpoint /health
+  endpoint:
+    health:
+      # Mostrar detalles del health check siempre
+      show-details: always
+      # Probes para Kubernetes liveness/readiness
+      probes:
+        enabled: true
+      # Incluir componentes específicos
+      include: diskSpace,ping,livenessState,readinessState,db,rabbit,mail
+
+  # Health indicators personalizados
+  health:
+    defaults:
+      enabled: true
+    # Disk space
+    diskspace:
+      enabled: true
+      threshold: 1GB
+    # Database connectivity
+    db:
+      enabled: true
+    # Message broker (RabbitMQ/ActiveMQ)
+    rabbit:
+      enabled: true
+    mail:
+      enabled: true
+    # Kubernetes probes
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    # Default timeout para health checks
+    timeout: 2000ms
+
+  # Métricas y exportación Prometheus
+  metrics:
+    enabled: true
+    export:
+      prometheus:
+        enabled: true
+        descriptions: true
+        step: 1m
+    # Distribución de percentiles para histogramas
+    distribution:
+      # Percentiles habituales para latencia HTTP
+      percentiles-histogram:
+        http.server.requests: true
+        jvm.gc.pause: true
+      # Service Level Objectives (SLO)
+      slo:
+        http.server.requests: 100ms,500ms,1000ms,2000ms,5000ms
+        # Métricas custom
+        gdpd.pedidos.tiempo.creacion: 500ms,1000ms,2000ms
+        gdpd.eventos.tiempo.procesamiento: 100ms,500ms,1000ms
+    # Tags por defecto en todas las métricas
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+      uuaa: GDPD
+
+  # Logging de actuator endpoints
+  logging:
+    level: INFO
+    request:
+      enabled: true
+    response:
+      enabled: false
+
+---
+# Configuración por Servicio
+
+# ============================================================
+# gdpd-pedidos-api (API REST - Puerto 8080)
+# ============================================================
+---
+spring:
+  profiles: actuator-pedidos-api
+  application:
+    name: gdpd-pedidos-api
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+    rabbit:
+      enabled: true
+
+info:
+  app:
+    name: GDPD Pedidos API
+    description: API REST para gestión de pedidos
+    version: 1.0.0
+    uuaa: GDPD
+    owner: Equipo Backend GDPD
+    slack: #gdpd-backend
+  company:
+    name: BBVA
+    headquarters: Madrid
+  build:
+    timestamp: @project.build.timestamp@
+    version: @project.version@
+
+---
+# ============================================================
+# gdpd-event-processor (Demonio - Puerto 9080)
+# ============================================================
+---
+spring:
+  profiles: actuator-event-processor
+  application:
+    name: gdpd-event-processor
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      include: diskSpace,ping,livenessState,readinessState,db,rabbit
+  health:
+    db:
+      enabled: true
+    rabbit:
+      enabled: true
+
+info:
+  app:
+    name: GDPD Event Processor
+    description: Demonio consumidor de eventos de pedidos
+    version: 1.0.0
+    uuaa: GDPD
+    owner: Equipo Middleware GDPD
+    slack: #gdpd-backend
+
+---
+# ============================================================
+# gdpd-report-batch (Batch - Puerto 9081)
+# ============================================================
+---
+spring:
+  profiles: actuator-report-batch
+  application:
+    name: gdpd-report-batch
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+  endpoint:
+    health:
+      include: diskSpace,ping,livenessState,readinessState,db
+  health:
+    db:
+      enabled: true
+    rabbit:
+      enabled: false
+
+info:
+  app:
+    name: GDPD Report Batch
+    description: Generador de reportes periódicos
+    version: 1.0.0
+    uuaa: GDPD
+    owner: Equipo Batch GDPD
+
+---
+# ============================================================
+# gdpd-report-scheduler (Scheduler - Puerto 9082)
+# ============================================================
+---
+spring:
+  profiles: actuator-report-scheduler
+  application:
+    name: gdpd-report-scheduler
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+  endpoint:
+    health:
+      include: diskSpace,ping,livenessState
+  health:
+    rabbit:
+      enabled: false
+
+info:
+  app:
+    name: GDPD Report Scheduler
+    description: Orquestador de batches vía cron
+    version: 1.0.0
+    uuaa: GDPD
+    owner: Equipo Batch GDPD
+
+---
+# Endpoints disponibles por servicio
+
+# GET /actuator - Lista todos los endpoints
+# GET /actuator/health - Health check general
+#   └─ /actuator/health/db - Conectividad a BD
+#   └─ /actuator/health/rabbit - Conectividad a broker
+#   └─ /actuator/health/diskSpace - Espacio en disco
+# GET /actuator/metrics - Lista de métricas disponibles
+# GET /actuator/metrics/{nombre} - Valores de métrica específica
+# GET /actuator/prometheus - Formato Prometheus para Grafana
+# GET /actuator/info - Información de la aplicación
+# GET /actuator/env - Variables de entorno (requiere auth)
+# GET /actuator/loggers - Configuración de loggers
+# GET /actuator/loggers/{name} - Logger específico
+# POST /actuator/loggers/{name} - Cambiar nivel de log dinámicamente
+# GET /actuator/threaddump - Thread dump para análisis
+# GET /actuator/heapdump - Heap dump para análisis (grande!)
+
+---
+# Métricas custom disponibles
+
+custom_metrics:
+  gdpd.pedidos.creados:
+    type: Counter
+    descripcion: Total de pedidos creados exitosamente
+    tags: [servicio, status]
+
+  gdpd.pedidos.tiempo.creacion:
+    type: Timer
+    descripcion: Tiempo de creación de pedido (percentiles 0.5, 0.95, 0.99)
+    percentiles: [0.5, 0.95, 0.99]
+
+  gdpd.eventos.consumidos:
+    type: Counter
+    descripcion: Total de eventos consumidos por el demonio
+
+  gdpd.eventos.procesados:
+    type: Counter
+    descripcion: Total de eventos procesados exitosamente
+
+  gdpd.eventos.tiempo.procesamiento:
+    type: Timer
+    descripcion: Tiempo de procesamiento de evento
+
+  gdpd.batch.ejecutar.duracion:
+    type: Timer
+    descripcion: Duración de ejecución del batch
+
+---
+# URLs de acceso local
+
+endpoints_local:
+  api:
+    health: "curl http://localhost:8080/actuator/health"
+    prometheus: "curl http://localhost:8080/actuator/prometheus"
+    metrics: "curl http://localhost:8080/actuator/metrics"
+
+  event_processor:
+    health: "curl http://localhost:9080/actuator/health"
+    prometheus: "curl http://localhost:9080/actuator/prometheus"
+
+  batch:
+    health: "curl http://localhost:9081/actuator/health"
+
+  scheduler:
+    health: "curl http://localhost:9082/actuator/health"
+
+---
+# Monitorización en producción
+
+production_setup:
+  prometheus:
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    job_name: gdpd-services
+    static_configs:
+      - targets:
+          - gdpd-pedidos-api:8080
+          - gdpd-event-processor:9080
+          - gdpd-report-batch:9081
+          - gdpd-report-scheduler:9082
+        labels:
+          uuaa: GDPD
+
+  grafana_dashboards:
+    - "GDPD API Health & Performance"
+    - "GDPD Event Processing"
+    - "GDPD Batch Jobs"
+    - "GDPD JVM Metrics"
+
+  alerts_threshold:
+    error_rate: "> 1%"
+    p95_latency: "> 2000ms"
+    heap_memory: "> 80%"
+    cpu_usage: "> 85%"
+
+---
+# Troubleshooting
+
+health_check_failed:
+  api:
+    - Verificar conectividad a BD: curl http://localhost:8080/actuator/health/db
+    - Verificar logs: kubectl logs -f gdpd-pedidos-api
+    - Comprobar recursos: kubectl top pod gdpd-pedidos-api
+
+  event_processor:
+    - Verificar conectividad a broker: curl http://localhost:9080/actuator/health/rabbit
+    - Ver estado del broker: http://localhost:8161/admin
+    - Revisar cola: Control-M console
+
+  batch:
+    - Verificar si está en ejecución: curl http://localhost:9081/actuator/health
+    - Ver último job: kubectl logs -f gdpd-report-batch --tail=50
+
+---
+**Última actualización**: 2026-06-09
+**Responsable**: Equipo de Operaciones NOVA
+**Versión**: 1.0.0

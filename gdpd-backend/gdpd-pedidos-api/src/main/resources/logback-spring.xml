@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ===== PROPIEDADES COMUNES ===== -->
+    <property name="LOG_LEVEL" value="INFO"/>
+    <property name="LOG_PATTERN" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- ===== APPENDER: CONSOLA (común para todos) ===== -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- ===== APPENDER: JSON LOGSTASH (para producción) ===== -->
+    <appender name="JSON_LOGSTASH" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <timeZone>UTC</timeZone>
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <version>[ignore]</version>
+                <message>message</message>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <level>level</level>
+                <levelValue>[ignore]</levelValue>
+            </fieldNames>
+            <customFields>
+                {
+                    "app":"${spring.application.name:unknown}",
+                    "env":"${spring.profiles.active:unknown}",
+                    "service":"gdpd-pedidos-api",
+                    "version":"1.0.0"
+                }
+            </customFields>
+            <includeContext>true</includeContext>
+            <includeMdc>true</includeMdc>
+            <writeVersion>false</writeVersion>
+        </encoder>
+    </appender>
+
+    <!-- ===== DESARROLLO / INTEGRACIÓN: Logs legibles para humanos ===== -->
+    <springProfile name="dev,int">
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+
+        <!-- Reducir ruido de frameworks -->
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="org.springframework.cloud" level="INFO"/>
+        <logger name="org.springframework.web" level="DEBUG"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+        <logger name="org.apache.activemq" level="WARN"/>
+        <logger name="org.springframework.amqp" level="INFO"/>
+
+        <!-- Logs específicos de negocio en DEBUG -->
+        <logger name="com.bbva.gdpd" level="DEBUG"/>
+    </springProfile>
+
+    <!-- ===== PREPRODUCCIÓN / PRODUCCIÓN: JSON para ELK ===== -->
+    <springProfile name="pre,pro">
+        <root level="INFO">
+            <appender-ref ref="JSON_LOGSTASH"/>
+        </root>
+
+        <!-- Logs de aplicación en INFO o superior -->
+        <logger name="com.bbva.gdpd" level="INFO"/>
+
+        <!-- Frameworks en WARN -->
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="org.springframework.cloud" level="WARN"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.apache.activemq" level="WARN"/>
+        <logger name="org.springframework.amqp" level="WARN"/>
+
+        <!-- Sólo ERROR para terceros -->
+        <logger name="org.springframework.boot.actuate" level="WARN"/>
+    </springProfile>
+
+    <!-- ===== FALLBACK: Si no hay perfil activo ===== -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
