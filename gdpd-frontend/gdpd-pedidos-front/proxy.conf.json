@@ -1,8 +1,0 @@
-{
-  "/SHIVA/GDPD/*": {
-    "target": "http://localhost:24000",
-    "secure": false,
-    "logLevel": "debug",
-    "changeOrigin": true
-  }
-}
