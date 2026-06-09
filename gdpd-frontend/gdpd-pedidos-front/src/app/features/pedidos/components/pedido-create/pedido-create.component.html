@@ -1,0 +1,90 @@
+<div class="page-container">
+  <div class="back-link">
+    <bbva-web-button-default variant="secondary" size="small" (click)="volver()">
+      ← Volver a la lista
+    </bbva-web-button-default>
+  </div>
+
+  <div class="page-header">
+    <h1>Nuevo pedido</h1>
+    <p>Completa los datos para crear un nuevo pedido</p>
+  </div>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+
+  <bbva-web-card class="form-card">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+      <!-- Referencia -->
+      <div class="form-field">
+        <bbva-web-form-text-input
+          label="Referencia *"
+          placeholder="Ej: PED-2024-001"
+          formControlName="referencia"
+          [error]="f['referencia'].invalid && f['referencia'].touched">
+        </bbva-web-form-text-input>
+        <div
+          *ngIf="f['referencia'].invalid && f['referencia'].touched"
+          class="field-error">
+          <span *ngIf="f['referencia'].errors?.['required']">La referencia es obligatoria.</span>
+          <span *ngIf="f['referencia'].errors?.['minlength']">Mínimo 3 caracteres.</span>
+          <span *ngIf="f['referencia'].errors?.['maxlength']">Máximo 50 caracteres.</span>
+          <span *ngIf="f['referencia'].errors?.['pattern']">Solo letras, números, guiones y barras bajas.</span>
+        </div>
+      </div>
+
+      <!-- Importe -->
+      <div class="form-field">
+        <bbva-web-form-text-input
+          label="Importe (€) *"
+          type="number"
+          placeholder="0.00"
+          formControlName="importe"
+          [error]="f['importe'].invalid && f['importe'].touched">
+        </bbva-web-form-text-input>
+        <div
+          *ngIf="f['importe'].invalid && f['importe'].touched"
+          class="field-error">
+          <span *ngIf="f['importe'].errors?.['required']">El importe es obligatorio.</span>
+          <span *ngIf="f['importe'].errors?.['min']">El importe debe ser mayor que 0.</span>
+          <span *ngIf="f['importe'].errors?.['max']">El importe no puede superar 9.999.999,99 €.</span>
+        </div>
+      </div>
+
+      <!-- Descripción -->
+      <div class="form-field">
+        <bbva-web-form-text-input
+          label="Descripción *"
+          placeholder="Descripción del pedido"
+          formControlName="descripcion"
+          [error]="f['descripcion'].invalid && f['descripcion'].touched">
+        </bbva-web-form-text-input>
+        <div
+          *ngIf="f['descripcion'].invalid && f['descripcion'].touched"
+          class="field-error">
+          <span *ngIf="f['descripcion'].errors?.['required']">La descripción es obligatoria.</span>
+          <span *ngIf="f['descripcion'].errors?.['minlength']">Mínimo 5 caracteres.</span>
+          <span *ngIf="f['descripcion'].errors?.['maxlength']">Máximo 500 caracteres.</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <bbva-web-button-default
+          variant="secondary"
+          type="button"
+          [disabled]="isSubmitting"
+          (click)="volver()">
+          Cancelar
+        </bbva-web-button-default>
+        <bbva-web-button-default
+          variant="primary"
+          type="submit"
+          [disabled]="isSubmitting">
+          {{ isSubmitting ? 'Creando...' : 'Crear pedido' }}
+        </bbva-web-button-default>
+      </div>
+
+    </form>
+  </bbva-web-card>
+</div>
