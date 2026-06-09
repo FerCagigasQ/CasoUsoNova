@@ -1,0 +1,10 @@
+spring:
+  cloud:
+    config:
+      uri: http://localhost:8888
+      name: gdpd-batch-reportes
+      profile: ${spring.profiles.active:dev}
+      fail-fast: false
+      retry:
+        max-attempts: 3
+        initial-interval: 1000

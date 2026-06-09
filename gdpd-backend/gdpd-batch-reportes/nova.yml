@@ -1,0 +1,21 @@
+subsistema: gdpd
+servicio:
+  nombre: gdpd-batch-reportes
+  tipo: batch
+  tecnologia: java11
+propiedades:
+  - nombre: spring.datasource.url
+    entorno:
+      dev: jdbc:postgresql://localhost:5555/novadb
+      int: jdbc:postgresql://db-int:5432/novadb
+      pre: jdbc:postgresql://db-pre:5432/novadb
+      pro: jdbc:postgresql://db-pro:5432/novadb
+  - nombre: eureka.client.service-url.defaultZone
+    entorno:
+      dev: http://localhost:8761/eureka/
+      int: http://eureka-int:8761/eureka/
+      pre: http://eureka-pre:8761/eureka/
+      pro: http://eureka-pro:8761/eureka/
+recursos:
+  cpu: 256m
+  memoria: 512Mi
