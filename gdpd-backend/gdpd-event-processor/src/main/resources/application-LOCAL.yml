@@ -1,0 +1,7 @@
+spring:
+  cloud:
+    stream:
+      rabbit:
+        binder:
+          addresses: localhost
+          port: 5672

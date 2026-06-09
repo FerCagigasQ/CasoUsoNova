@@ -1,0 +1,24 @@
+service:
+  uuaa: GDPD
+  publicName: gdpdeventprocessor
+  name: gdpd-event-processor
+  description: >
+    Demonio GDPD que consume eventos del canal pedidos-events y procesa
+    los cambios de estado de pedidos de forma asíncrona.
+  version: "1.0.0"
+  type: Daemon
+  language: Java - Spring boot
+  languageVersion: "11.0.11"
+  jdkVersion: "zulu11.48.21"
+  novaVersion: "25.0"
+  novaCliVersion: "7.8.0"
+asyncapis:
+  backToBack:
+    - src/main/resources/asyncapi.yml
+properties:
+  - name: "service.log"
+    description: "Nivel de log"
+    type: "STRING"
+    default: "INFO"
+    management: "SERVICE"
+    encrypt: false

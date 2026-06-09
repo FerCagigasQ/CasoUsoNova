@@ -1,0 +1,26 @@
+service:
+  uuaa: GDPD
+  publicName: gdpdreportbatch
+  name: gdpd-report-batch
+  description: >
+    Batch GDPD: Job Spring Batch que lee pedidos de la BBDD, los procesa y genera informes CSV.
+  version: "1.0.0"
+  type: Batch
+  language: Java - Spring Batch
+  languageVersion: "11.0.11"
+  jdkVersion: "zulu11.48.21"
+  novaVersion: "25.0"
+  novaCliVersion: "7.8.0"
+properties:
+  - name: "service.log"
+    description: "Nivel de log"
+    type: "STRING"
+    default: "INFO"
+    management: "SERVICE"
+    encrypt: false
+  - name: "batch.output.path"
+    description: "Ruta de salida de los informes CSV"
+    type: "STRING"
+    default: "/tmp/gdpd-reports"
+    management: "SERVICE"
+    encrypt: false

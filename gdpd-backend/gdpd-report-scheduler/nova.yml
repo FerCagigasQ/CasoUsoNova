@@ -1,0 +1,25 @@
+service:
+  uuaa: GDPD
+  publicName: gdpdreportscheduler
+  name: gdpd-report-scheduler
+  description: Scheduler GDPD que lanza el batch de reportes de pedidos.
+  version: "1.0.0"
+  type: Batch Scheduler
+  novaVersion: "25.0"
+  novaCliVersion: "7.8.0"
+contextParams:
+  - name: "trigger"
+    description: "Cron expression para lanzar el batch de reportes"
+    type: "STRING"
+    defaultValue: "0 0 2 * * ?"
+  - name: "batchServiceUrl"
+    description: "URL del servicio gdpd-report-batch"
+    type: "STRING"
+    defaultValue: "http://gdpd-report-batch:8082"
+properties:
+  - name: "service.log"
+    description: "Nivel de log"
+    type: "STRING"
+    default: "INFO"
+    management: "SERVICE"
+    encrypt: false

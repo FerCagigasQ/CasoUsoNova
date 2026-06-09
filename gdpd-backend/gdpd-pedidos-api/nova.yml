@@ -1,0 +1,35 @@
+service:
+  uuaa: GDPD
+  publicName: gdpdpedidosapi
+  name: gdpd-pedidos-api
+  description: >
+    API REST para gestión del ciclo de vida de pedidos GDPD.
+    Expone endpoints CRUD, publica eventos al broker y notifica via SSE.
+  version: "1.0.0"
+  type: API
+  language: Java - Spring boot
+  languageVersion: "11.0.11"
+  jdkVersion: "zulu11.48.21"
+  novaVersion: "25.0"
+  novaCliVersion: "7.8.0"
+apis:
+  served:
+    - definition: src/main/resources/openapi/api.yml
+asyncapis:
+  backToBack:
+    - src/main/resources/asyncapi.yml
+  backToFront:
+    - src/main/resources/asyncapi.yml
+properties:
+  - name: "service.log"
+    description: "Nivel de log"
+    type: "STRING"
+    default: "INFO"
+    management: "SERVICE"
+    encrypt: false
+  - name: "spring.datasource.url"
+    description: "URL de la base de datos"
+    type: "STRING"
+    default: "jdbc:postgresql://localhost:5555/gdpddb"
+    management: "ENVIRONMENT"
+    encrypt: false

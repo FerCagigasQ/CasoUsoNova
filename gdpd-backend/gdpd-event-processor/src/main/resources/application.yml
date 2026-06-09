@@ -1,0 +1,28 @@
+uuaa: gdpd
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      show-details: ALWAYS
+logging:
+  path: ${LOG_PATH:.}
+  level:
+    ROOT: INFO
+    com.bbva.gdpd: DEBUG
+server:
+  port: ${NOVA_PORT:8081}
+spring:
+  cloud:
+    stream:
+      bindings:
+        pedidosEventsConsumer-in-0:
+          destination: pedidos-events
+          group: gdpd-event-processor
+      rabbit:
+        bindings:
+          pedidosEventsConsumer-in-0:
+            consumer:
+              auto-bind-dlq: true

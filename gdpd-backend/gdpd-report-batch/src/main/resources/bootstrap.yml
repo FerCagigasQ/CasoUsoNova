@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: ${APPLICATION_NAME:com.bbva.gdpd.gdpdreportbatch-releasename-1}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:LOCAL}
+  cloud:
+    config:
+      enabled: true
+      failFast: false
+      label: ${DEPLOYMENT_PLAN_ID:1}
+      uri: ${CONFIG_SERVER_URI:http://localhost:24000/configserver/}

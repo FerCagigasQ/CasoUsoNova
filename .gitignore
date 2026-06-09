@@ -1,0 +1,23 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+NOVACLI_PATH/
+.m2/
+nova-deps/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+*.launch
+
+# Spring Boot
+*.pid
+
+# OS
+.DS_Store
+Thumbs.db
