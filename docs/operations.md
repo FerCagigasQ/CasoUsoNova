@@ -1,597 +1,419 @@
-# GDPD Operations Guide
+# Monitorización y Operaciones — GDPD (Gestión de Pedidos)
 
-Configuración de monitorización, alertas y procedimientos operacionales para la plataforma GDPD en entornos de producción (pro), preproducción (pre) y desarrollo (dev).
-
-## Contenidos
-
-1. [Runtime Local](#runtime-local)
-2. [Spring Boot Actuator](#spring-boot-actuator)
-3. [Métricas y Monitorización](#métricas-y-monitorización)
-4. [Alertas Críticas](#alertas-críticas)
-5. [Logging JSON](#logging-json)
-6. [Transferencias de Ficheros](#transferencias-de-ficheros)
-7. [Procedimiento On-Call](#procedimiento-on-call)
-8. [Playbooks de Respuesta a Incidentes](#playbooks-de-respuesta-a-incidentes)
+> Guía de operaciones, alertas, métricas y procedimientos de respuesta para el producto GDPD en NOVA.
 
 ---
 
-## Runtime Local
+## 1. Vista General de Servicios Monitorizados
 
-### Iniciar Todos los Servicios
-
-```bash
-nova runtime start all
-nova runtime status
-```
-
-**Servicios levantados:**
-
-| Servicio | Puerto | URL | Tipo |
-|----------|--------|-----|------|
-| PostgreSQL | 5555 | jdbc:postgresql://localhost:5555/novadb | Database |
-| NOVA Local Gateway | 24000 | http://localhost:24000 | Gateway |
-| Config Server | 8888 | http://localhost:8888 | Config |
-| NOVA WebSeal Mock | 23000 | https://localhost:23000 | Auth |
-| Queue Manager (ActiveMQ) | 8161 | http://localhost:8161 | Broker |
-| gdpd-pedidos-api | 8080 | http://localhost:8080 | API |
-| gdpd-event-processor | 9080 | http://localhost:9080 | Daemon |
-
-### Verificar Estado
-
-```bash
-curl http://localhost:24000/health
-curl http://localhost:24000/configserver/health
-```
+| Servicio | Tipo | Puerto | Criticidad | Salud | Responsabilidad |
+|----------|------|--------|-----------|-------|-----------------|
+| `gdpd-pedidos-api` | API REST | 8080 | CRÍTICA | /actuator/health | Endpoints CRUD de pedidos, Swagger |
+| `gdpd-event-processor` | Demonio | — | ALTA | /actuator/health | Consumidor de eventos del broker |
+| `gdpd-report-batch` | Batch | — | ALTA | /actuator/health | Generación de reportes periódicos |
+| `gdpd-report-scheduler` | Scheduler | — | MEDIA | /actuator/health | Orquestación de batches vía cron |
 
 ---
 
-## Spring Boot Actuator
+## 2. Spring Boot Actuator — Configuración de Health Checks
 
-Cada servicio expone endpoints de salud y métricas en `/actuator`.
-
-### Endpoints Habilitados
+Cada servicio backend debe exponer los endpoints de Actuator en su `application.yml`:
 
 ```yaml
+# application.yml (común a todos los servicios backend)
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus
+        include: health,metrics,info,prometheus
   endpoint:
     health:
       show-details: always
+info:
+  app:
+    name: gdpd-pedidos-api
+    version: 1.0.0
+    uuaa: GDPD
 ```
 
-### Health Check
+### Health Indicators Personalizados por Servicio
 
-```bash
-# Verificar salud general
-curl http://localhost:8080/actuator/health
+#### gdpd-pedidos-api — DatabaseHealthIndicator
 
-# JSON estructurado con detalles
-curl http://localhost:8080/actuator/health?pretty=true
-```
-
-**Respuesta esperada:**
-```json
-{
-  "status": "UP",
-  "components": {
-    "pedidoHealthIndicator": {
-      "status": "UP",
-      "details": {
-        "service": "gdpd-pedidos-api",
-        "status": "Operational"
-      }
-    },
-    "db": {
-      "status": "UP",
-      "details": {
-        "database": "PostgreSQL"
-      }
-    },
-    "rabbit": {
-      "status": "UP"
+```java
+@Component
+public class DatabaseHealthIndicator implements HealthIndicator {
+    @Autowired private DataSource dataSource;
+    
+    @Override
+    public Health health() {
+        try (Connection conn = dataSource.getConnection()) {
+            return conn.isValid(2) 
+                ? Health.up().withDetail("database", "PostgreSQL").build()
+                : Health.down().build();
+        } catch (SQLException e) {
+            return Health.down().withException(e).build();
+        }
     }
-  }
 }
 ```
 
-### Info del Servicio
+#### gdpd-event-processor — BrokerHealthIndicator
 
-```bash
-curl http://localhost:8080/actuator/info
-```
-
-### Métricas de la JVM
-
-```bash
-# Consumo de memoria actual
-curl http://localhost:8080/actuator/metrics/jvm.memory.used
-
-# Heap máximo disponible
-curl http://localhost:8080/actuator/metrics/jvm.memory.max
-
-# CPU del sistema
-curl http://localhost:8080/actuator/metrics/system.cpu.usage
-```
-
----
-
-## Métricas y Monitorización
-
-### Métricas Clave por Servicio
-
-#### gdpd-pedidos-api
-
-**Transacciones:**
-- `nova.transacciones.procesadas` (Counter): Total de transacciones exitosas
-- `nova.transacciones.fallidas` (Counter): Total de transacciones con error
-- `nova.transacciones.tiempo` (Timer): Percentiles P50, P95, P99 de duración
-
-**JVM:**
-- `jvm.memory.used`: Memoria heap utilizada (bytes)
-- `jvm.memory.max`: Tamaño máximo de heap (bytes)
-- `jvm.threads.live`: Threads activos
-- `system.cpu.usage`: Porcentaje CPU del sistema
-
-**HTTP:**
-- `http.server.requests` (Timer): Latencia de endpoints REST
-- `http.server.requests.seconds_count{status=~"5.."}`: Errores 5XX
-
-#### gdpd-event-processor
-
-**Consumo de Eventos:**
-- `spring.cloud.stream.binder.rabbit.messages.received`: Total de eventos consumidos
-- `spring.cloud.stream.binder.rabbit.messages.failed`: Total de eventos fallidos
-
-**JVM:**
-- `jvm.memory.used`: Memoria heap utilizada
-- `jvm.threads.live`: Threads activos en el consumer
-
-### Exportación Prometheus
-
-```bash
-# Prometheus format (para scraping)
-curl http://localhost:8080/actuator/prometheus
+```java
+@Component
+public class BrokerHealthIndicator implements HealthIndicator {
+    @Autowired private JmsTemplate jmsTemplate;
+    
+    @Override
+    public Health health() {
+        try {
+            jmsTemplate.convertAndSend("health-check", "ping");
+            return Health.up().withDetail("broker", "ActiveMQ").build();
+        } catch (Exception e) {
+            return Health.down().withException(e).build();
+        }
+    }
+}
 ```
 
 ---
 
-## Alertas Críticas
+## 3. Métricas Custom con Micrometer
 
-### Configuración en Portal NOVA
+### gdpd-pedidos-api — Métricas de Pedidos
 
-**IMPORTANTE:** Estas alertas deben configurarse en el Portal NOVA → Operaciones → Alertas.
+```java
+@Component
+public class PedidosMetricas {
+    private final Counter pedidosCreados;
+    private final Timer tiempoCreacion;
+    
+    public PedidosMetricas(MeterRegistry registry) {
+        this.pedidosCreados = Counter.builder("gdpd.pedidos.creados")
+            .tag("servicio", "gdpd-pedidos-api")
+            .register(registry);
+        
+        this.tiempoCreacion = Timer.builder("gdpd.pedidos.tiempo.creacion")
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(registry);
+    }
+    
+    public void registrarCreacion(Duration duracion) {
+        pedidosCreados.increment();
+        tiempoCreacion.record(duracion);
+    }
+}
+```
 
-```yaml
-# Portal NOVA Alertas Configuration
-alertas:
-  - nombre: "Servicio Caído - gdpd-pedidos-api"
-    servicio: gdpd-pedidos-api
-    metrica: /actuator/health
-    condicion: "status != UP"
-    duracion: 1m
-    severidad: CRITICAL
-    notificacion:
-      - email: oncall-gdpd@bbva.com
-      - sms: oncall
-      - gira: escalado_automatico
+### gdpd-event-processor — Métricas de Eventos
 
-  - nombre: "BD PostgreSQL No Disponible"
-    servicio: "*"
-    metrica: /actuator/health/db
-    condicion: "status != UP"
-    duracion: 1m
-    severidad: CRITICAL
-    notificacion:
-      - email: oncall-gdpd@bbva.com
-      - dba-team@bbva.com
-      - sms: oncall
-
-  - nombre: "Cola RabbitMQ > 1000 Mensajes"
-    servicio: gdpd-pedidos-api
-    metrica: spring.cloud.stream.binder.rabbit.messages.received
-    condicion: "> 1000"
-    duracion: 5m
-    severidad: HIGH
-    notificacion:
-      - email: oncall-gdpd@bbva.com
-      - middleware-team@bbva.com
-
-  - nombre: "Latencia P95 > 2 segundos"
-    servicio: gdpd-pedidos-api
-    metrica: http.server.requests.seconds{quantile="0.95"}
-    condicion: "> 2.0"
-    duracion: 5m
-    severidad: WARNING
-    notificacion:
-      - email: performance-team@bbva.com
-
-  - nombre: "Heap Memory > 80%"
-    servicio: "*"
-    metrica: "jvm.memory.used / jvm.memory.max"
-    condicion: "> 0.80"
-    duracion: 10m
-    severidad: WARNING
-    notificacion:
-      - email: oncall-gdpd@bbva.com
-      - infra-team@bbva.com
-
-  - nombre: "Error Rate Elevado (> 1%)"
-    servicio: gdpd-pedidos-api
-    metrica: "http.server.requests.seconds_count{status=~'5..'} / http.server.requests.seconds_count"
-    condicion: "> 0.01"
-    duracion: 2m
-    severidad: HIGH
-    notificacion:
-      - email: oncall-gdpd@bbva.com
-      - sms: oncall
-
-  - nombre: "Consumidor Eventos Atrasado"
-    servicio: gdpd-event-processor
-    metrica: spring.cloud.stream.binder.rabbit.messages.received
-    condicion: "rate < 10 per minute (por > 15min)"
-    duracion: 15m
-    severidad: MEDIUM
-    notificacion:
-      - email: middleware-team@bbva.com
+```java
+@Component
+public class EventProcessorMetricas {
+    private final Counter eventosConsumidos;
+    private final Counter eventosProcesados;
+    
+    public EventProcessorMetricas(MeterRegistry registry) {
+        this.eventosConsumidos = Counter.builder("gdpd.eventos.consumidos")
+            .register(registry);
+        this.eventosProcesados = Counter.builder("gdpd.eventos.procesados")
+            .register(registry);
+    }
+}
 ```
 
 ---
 
-## Logging JSON
+## 4. Logging Estructurado — Logback JSON
 
-### Configuración Logback
-
-Se usa `logstash-logback-encoder` para generar logs en formato JSON en producción (pro/pre).
-
-**Archivo:** `logback-spring.xml`
+Archivo: `logback-spring.xml`
 
 ```xml
-<!-- PRODUCCIÓN: JSON para ELK -->
-<springProfile name="pro,pre">
-    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <customFields>
-                {"app":"${spring.application.name}","env":"${spring.profiles.active}"}
-            </customFields>
-        </encoder>
-    </appender>
-    <root level="INFO">
-        <appender-ref ref="JSON"/>
-    </root>
-</springProfile>
-```
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty name="APP_NAME" source="spring.application.name"/>
+    <springProperty name="PROFILE" source="spring.profiles.active" defaultValue="dev"/>
 
-### Campos Capturados
+    <!-- PRODUCCIÓN: JSON para ELK -->
+    <springProfile name="pro,pre">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>
+                    {"app":"${APP_NAME}","env":"${PROFILE}","uuaa":"GDPD"}
+                </customFields>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
 
-Cada log en JSON incluye:
-- `@timestamp`: ISO 8601
-- `@version`: Versión Logstash
-- `level`: DEBUG, INFO, WARN, ERROR
-- `logger_name`: Clase que genera el log
-- `message`: Texto del log
-- `app`: Nombre del servicio (ej: gdpd-pedidos-api)
-- `env`: Perfil activo (pro, pre, dev, int)
-- `trace_id`: Proporcionado por Spring Sleuth (para correlacionar)
-
-### Ejemplo de Log Producción
-
-```json
-{
-  "@timestamp": "2026-06-09T15:30:45.123Z",
-  "level": "INFO",
-  "logger_name": "com.bbva.gdpd.pedidos.service.PedidoService",
-  "message": "Pedido creado exitosamente",
-  "app": "gdpd-pedidos-api",
-  "env": "pro",
-  "trace_id": "a1b2c3d4e5f6",
-  "pedido_id": "PED-2026-001234"
-}
+    <!-- DESARROLLO: Legible -->
+    <springProfile name="dev,int">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+</configuration>
 ```
 
 ---
 
-## Transferencias de Ficheros
+## 5. Alertas Críticas
 
-### Transferencia Entrada: Fichero Diario de Clientes
-
-**Tipo:** ConnectDirect (CD)
-**Dirección:** Entrada desde mainframe
+### Alerta 1: API No Responde (CRÍTICA)
 
 ```yaml
-transferencia:
-  nombre: "Fichero Diario Clientes"
-  origen:
-    nodo: NODO.MAINFRAME.PROD
-    fichero: /datos/batch/CLIENTES_YYYYMMDD.csv
-    patron: "CLIENTES_*.csv"
-  
-  destino:
-    path: /app/data/input/clientes/
-    servidor: gdpd-pedidos-api
-  
-  planificacion:
-    herramienta: Control-M
-    cron: "0 6 * * MON-FRI"
-    timezone: Europe/Madrid
-  
-  reintentos: 3
-  timeout: 300 segundos
-  
-  post_transferencia:
-    accion: "disparar_batch"
-    job: "gdpd-batch-procesarClientes"
-    dependencias:
-      - validacion_fichero
-      - backup_anterior
+alerta:
+  nombre: "API REST — Servicio No Responde"
+  servicio: gdpd-pedidos-api
+  metrica: up{job="gdpd-pedidos-api"}
+  condicion: "== 0"
+  duracion: 1m
+  severidad: CRITICAL
+  notificacion:
+    - email: equipo-gdpd@bbva.com
+    - sms: oncall
 ```
 
-**Monitorización:**
-- Verificar completitud: `wc -l /app/data/input/clientes/CLIENTES_*.csv`
-- Logs: `docker logs gdpd-batch-reportes | grep "Procesando clientes"`
-
-### Transferencia Salida: Reporte Diario
-
-**Tipo:** Xcom
-**Dirección:** Salida hacia distribución
+### Alerta 2: Latencia Elevada (ALTA)
 
 ```yaml
-transferencia:
-  nombre: "Reporte Diario de Pedidos"
-  origen:
-    path: /app/data/output/reportes/
-    patron: "REPORTE_*.pdf"
-    servidor: gdpd-batch-reportes
-  
-  destino:
-    nodo: NODO.DISTRIBUCION
-    path: /reportes/diarios/
-  
-  planificacion:
-    herramienta: Control-M
-    cron: "0 20 * * MON-FRI"
-    timezone: Europe/Madrid
-  
-  compresion: gzip
-  notificacion_exito: business-team@bbva.com
-  notificacion_error: oncall-gdpd@bbva.com
+alerta:
+  nombre: "API REST — Latencia > 2s"
+  metrica: http_server_requests_seconds{quantile="0.95"}
+  condicion: "> 2"
+  duracion: 5m
+  severidad: HIGH
+```
+
+### Alerta 3: Tasa de Errores (ALTA)
+
+```yaml
+alerta:
+  nombre: "API REST — Error Rate > 5%"
+  metrica: rate(http_server_requests_seconds_count{status=~"5.."}[5m])
+  condicion: "> 5"
+  duracion: 2m
+  severidad: HIGH
+```
+
+### Alerta 4: Memoria JVM (ALTA)
+
+```yaml
+alerta:
+  nombre: "JVM — Heap Memory > 85%"
+  metrica: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes
+  condicion: "> 0.85"
+  duracion: 10m
+  severidad: HIGH
+```
+
+### Alerta 5: Broker Desconectado (CRÍTICA)
+
+```yaml
+alerta:
+  nombre: "Demonio — Broker No Accesible"
+  servicio: gdpd-event-processor
+  metrica: activemq_connection_count
+  condicion: "== 0"
+  duracion: 1m
+  severidad: CRITICAL
+  notificacion:
+    - email: equipo-middleware@bbva.com
+    - sms: oncall
+```
+
+### Alerta 6: Lag de Eventos (ALTA)
+
+```yaml
+alerta:
+  nombre: "Demonio — Eventos en Cola > 1000"
+  metrica: activemq_queue_depth{queue="pedidos-events"}
+  condicion: "> 1000"
+  duracion: 5m
+  severidad: HIGH
+```
+
+### Alerta 7: Batch Falla (ALTA)
+
+```yaml
+alerta:
+  nombre: "Batch — Job Fallido"
+  metrica: spring_batch_job_status{job="generarReporte"}
+  condicion: "== FAILED"
+  severidad: HIGH
+  notificacion:
+    - email: equipo-batch@bbva.com
+```
+
+### Alerta 8: Pool de Conexiones (CRÍTICA)
+
+```yaml
+alerta:
+  nombre: "PostgreSQL — Pool Agotado"
+  metrica: hikaricp_connections_max - hikaricp_connections_available
+  condicion: "> 95%"
+  duracion: 3m
+  severidad: CRITICAL
+```
+
+### Alerta 9: Config Server Down (CRÍTICA)
+
+```yaml
+alerta:
+  nombre: "Config Server — No Responde"
+  metrica: up{job="config-server"}
+  condicion: "== 0"
+  duracion: 2m
+  severidad: CRITICAL
+```
+
+### Alerta 10: Disk Space (ALTA)
+
+```yaml
+alerta:
+  nombre: "Disk — Espacio < 10%"
+  metrica: disk_free_bytes / disk_total_bytes
+  condicion: "< 0.10"
+  duracion: 5m
+  severidad: HIGH
 ```
 
 ---
 
-## Procedimiento On-Call
+## 6. Procedimientos de Respuesta a Incidentes
 
-### Escalación de Incidentes
+### Incidencia: API No Responde (HTTP 503)
 
-**Nivel 1: Alertas Automáticas (Primeros 15 min)**
-1. Dashboard Portal NOVA monitorea métricas
-2. Alertas CRITICAL disparan SMS + Email automático
-3. On-call recibe notificación en el móvil
+1. **Verificar health**: `curl http://gdpd-pedidos-api:8080/actuator/health`
+2. **Revisar logs**: `kubectl logs -f gdpd-pedidos-api --tail=100`
+3. **Verificar JVM**:
+   - CPU: ¿En 100%? → aumentar replicas
+   - Heap: ¿> 80%? → generar heap dump
+4. **Verificar BD**: `curl http://gdpd-pedidos-api:8080/actuator/health/db`
+5. **Reiniciar** (last resort): `kubectl rollout restart deployment gdpd-pedidos-api`
 
-**Nivel 2: Verificación Manual (15-30 min)**
-- On-call accede a Portal NOVA Operaciones
-- Verifica: Health check, Logs (ELK), Métricas (Prometheus)
-- Si es sencillo → Ejecuta playbook
-- Si es complejo → Escala al siguiente nivel
+### Incidencia: Demonio No Procesa Eventos
 
-**Nivel 3: Escalado a Especialista (> 30 min)**
-- On-call escala a especialista relevante (Backend, DBA, Middleware)
-- Crea issue en Jira con contexto inicial
+1. **Ver cola en broker**: Acceder a ActiveMQ console (puerto 8161)
+2. **Verificar broker conectado**: `curl http://gdpd-event-processor:8080/actuator/health/broker`
+3. **Si DOWN**: Revisar logs del demonio
+4. **Si UP pero cola crece**: Aumentar replicas o revisar performance
+5. **Monitorizar**: Esperar a que la cola se vacíe
 
-### Gira de On-Call
+### Incidencia: Batch Job Falla
 
+1. **Revisar logs**: `kubectl logs -f gdpd-report-batch`
+2. **Causas comunes**:
+   - BD indisponible
+   - Datos malformados
+   - Timeout
+   - OOM
+3. **Resolver** según causa y reintentar
+
+---
+
+## 7. Runtime Local — Arranque y Verificación
+
+```bash
+# 1. Arrancar todos los servicios
+nova runtime start all
+
+# 2. Verificar estado
+nova runtime status
+
+# Salida esperada:
+# Service              | Status | PID    | Port  | URL
+# postgresql           | UP     | 12345  | 5555  | jdbc:postgresql://localhost:5555/gdpddb
+# activemq             | UP     | 12346  | 8161  | http://localhost:8161/admin
+# api-gateway          | UP     | 12347  | 24000 | http://localhost:24000
+# config-server        | UP     | 12348  | 8888  | http://localhost:8888
+# webseal-mock         | UP     | 12349  | 23000 | http://localhost:23000
 ```
-Semana 1 (Jun 9-15):    Equipo A (oncall-gdpd@bbva.com)
-Semana 2 (Jun 16-22):   Equipo B
-Semana 3 (Jun 23-29):   Equipo C
-Semana 4 (Jun 30-Jul6): Equipo D
+
+### Health Checks Locales
+
+```bash
+curl http://localhost:8080/actuator/health      # API
+curl http://localhost:9080/actuator/health      # Demonio
+curl http://localhost:9081/actuator/health      # Batch
+curl http://localhost:9082/actuator/health      # Scheduler
+curl http://localhost:8888/actuator/health      # Config Server
 ```
 
-Cada equipo tiene un principal + suplente. Rotación en **Lunes 09:00 CET**.
+---
 
-### Contactos Críticos
+## 8. Transferencias de Ficheros
 
-| Rol | Email | Teléfono |
-|-----|-------|----------|
-| On-Call GDPD | oncall-gdpd@bbva.com | +34-91-XXX-XXXX |
-| DBA Team | dba-team@bbva.com | +34-91-XXX-XXXX |
-| Middleware | middleware-team@bbva.com | +34-91-XXX-XXXX |
-| Network/Infra | infra-team@bbva.com | +34-91-XXX-XXXX |
+El batch `gdpd-report-batch` exporta reportes CSV via ConnectDirect/Xcom.
+
+```yaml
+app:
+  reports:
+    output-path: /app/reports/
+    pattern: "REPORTE_DIARIO_*.csv"
+    compression: gzip
+  transfer:
+    type: connectdirect  # file, xcom, connectdirect
+    schedule: "0 20 * * MON-FRI"  # 20:00 lunes-viernes
+    destination:
+      path: /reportes/diarios/
+      node: NODO.DISTRIBUCION
+    retry: 3
+    notification:
+      on-success: equipo-ops@bbva.com
+```
 
 ---
 
-## Playbooks de Respuesta a Incidentes
+## 9. Escalado y Límites de Recursos
 
-### Incidencia: Servicio No Responde (HTTP 503 / Health DOWN)
+| Servicio | CPU | Memoria | Replicas (min/max) |
+|----------|-----|---------|-------------------|
+| gdpd-pedidos-api | 512m | 1Gi | 2/8 |
+| gdpd-event-processor | 256m | 512Mi | 1/4 |
+| gdpd-report-batch | 1000m | 2Gi | 1/2 |
+| gdpd-report-scheduler | 128m | 256Mi | 1/1 |
 
-**Duración típica:** 5-10 min | **Severidad:** CRITICAL
-
-1. **Verificar Health Check**
-   ```bash
-   curl http://gdpd-pedidos-api:8080/actuator/health
-   # Si status != UP → ir a paso 2
-   ```
-
-2. **Revisar Logs Últimos 100 Eventos**
-   ```bash
-   # Portal NOVA → Operaciones → Logs
-   # O vía ELK Kibana para env=pro
-   docker logs gdpd-pedidos-api --tail=100
-   ```
-
-3. **Verificar Métricas Críticas**
-   - CPU: `system.cpu.usage` → Si > 90%, escalar a Infra
-   - Memoria: `jvm.memory.used / jvm.memory.max` → Si > 95%, reiniciar
-   - Threads: `jvm.threads.live` → Si > 300, investigar memory leak
-   - Conexiones BD: `HikariPool.active` → Si == max, pool agotado
-
-4. **Diagnosis por Tipo de Fallo**
-
-   **Si memoria: OOM**
-   ```bash
-   # Generar heap dump (requiere privilegios)
-   curl -O http://gdpd-pedidos-api:8080/actuator/heapdump
-   # Enviar a DBA/Performance team para análisis
-   ```
-
-   **Si BD no responde:**
-   ```bash
-   # Verificar conectividad
-   psql -h db-pro.nova -U nova -c "SELECT 1"
-   # Si falla, contactar DBA team
-   ```
-
-   **Si RabbitMQ no disponible:**
-   ```bash
-   # Verificar broker
-   curl http://rabbitmq-cluster.nova:15672/api/vhosts
-   # Si falla, contactar Middleware team
-   ```
-
-5. **Acciones Correctivas**
-
-   | Problema | Acción | Resultado Esperado |
-   |----------|--------|-------------------|
-   | Memory leak | Reiniciar pod/contenedor | Health UP en < 1 min |
-   | BD desconectada | Reintentos automáticos (Hikari) | Pool reconecta en < 30s |
-   | Queue bloqueada | Limpiar cola (Control-M) | Reanudar procesamiento |
-   | CPU alta | Escalar réplicas temporalmente | CPU < 70% |
-
-6. **Documentar Incidente**
-   ```
-   - Hora de detección:
-   - Causa raíz:
-   - Acción correctiva:
-   - Hora de resolución:
-   - Impacto: (transacciones perdidas, clientes afectados, duración)
-   - Post-mortem: Agendar para 48h después
-   ```
+```bash
+# Horizontal Pod Autoscaler
+kubectl autoscale deployment gdpd-pedidos-api --min=2 --max=8 --cpu-percent=70
+```
 
 ---
 
-### Incidencia: Error Rate Elevado (> 1%)
+## 10. Checklist Pre-Producción
 
-**Duración típica:** 10-15 min | **Severidad:** HIGH
-
-1. **Confirmar Error Rate**
-   ```bash
-   # Últimas 5 minutos
-   curl "http://gdpd-pedidos-api:8080/actuator/metrics/http.server.requests.seconds_count?tag=status:500,status:502,status:503"
-   ```
-
-2. **Identificar Endpoint Afectado**
-   ```
-   Portal NOVA → Métricas → Filtrar por URI
-   Buscar qué endpoint tiene mayor ratio de errores
-   ```
-
-3. **Revisar Logs de Error**
-   ```bash
-   # Filtrar por ERROR en últimos 10 minutos
-   docker logs gdpd-pedidos-api --since 10m | grep ERROR
-   # O en ELK: level:ERROR AND @timestamp:[now-10m TO now]
-   ```
-
-4. **Común: Problema en Dependencia**
-   - ¿BD rechazando conexiones? → Ver Metrics HikariPool
-   - ¿RabbitMQ full? → Ver cola de eventos
-   - ¿Timeout en servicio externo? → Ver circuit breaker status
-
-5. **Recuperación**
-   - Si es transiente: Esperar + reintentos automáticos
-   - Si persiste > 2 min: Escalar a especialista del módulo afectado
+- [ ] Actuator expone endpoints: health, metrics, prometheus
+- [ ] Health indicators implementados y funcionales
+- [ ] Métricas custom configuradas (Micrometer)
+- [ ] Logging JSON en producción (Logback)
+- [ ] Spring Cloud Sleuth para tracing distribuido
+- [ ] Alertas configuradas en Portal NOVA
+- [ ] Dashboards Grafana creados
+- [ ] Transferencias de ficheros probadas
+- [ ] Runbooks documentados
+- [ ] Equipo operaciones entrenado
 
 ---
 
-### Incidencia: Latencia Alta (P95 > 2s)
+## Referencias
 
-**Duración típica:** 15-20 min | **Severidad:** MEDIUM/HIGH
-
-1. **Confirmar Latencia**
-   ```bash
-   curl "http://gdpd-pedidos-api:8080/actuator/metrics/http.server.requests.seconds?tag=quantile:0.95"
-   ```
-
-2. **Identificar Endpoint Lento**
-   ```
-   Portal NOVA → Métricas → http.server.requests
-   Filtrar por URI y latencia
-   ```
-
-3. **Posibles Causas**
-   - Query lenta en BD: Revisar query plan, índices
-   - Timeout en RabbitMQ: Revisar tamaño de cola
-   - GC pauses: Revisar memoria, gc.pauses metric
-   - CPU contention: Escalar réplicas
-
-4. **Acción Correctiva**
-   - Escalar réplicas de gdpd-pedidos-api (temporal)
-   - Investigar query/índice con DBA si es BD
-   - Generar jstack para analizar threads bloqueados
+- NOVA Documentation: [docs/arquitectura.md](arquitectura.md)
+- Spring Boot Actuator: https://spring.io/guides/gs/actuator-service/
+- Micrometer Metrics: https://micrometer.io/docs/concepts
+- Spring Cloud Sleuth: https://spring.io/projects/spring-cloud-sleuth
+- Logback Configuration: https://logback.qos.ch/manual/configuration.html
 
 ---
 
-### Incidencia: Batch Job Fallido
-
-**Duración típica:** Depende del reintentos | **Severidad:** HIGH
-
-1. **Verificar Estado del Job**
-   ```bash
-   # Control-M status
-   ctm 'status' 'gdpd-batch-procesarClientes'
-   
-   # Logs del job
-   docker logs gdpd-batch-reportes --since 1h | grep gdpd-batch
-   ```
-
-2. **Causas Comunes**
-   - Fichero de entrada malformado: Validar CSV contra esquema
-   - BD bloqueada: Verificar locks con DBA
-   - Espacio en disco: Revisar `/app/data/` usage
-   - Timeout: Aumentar tiempo límite en Control-M si legítimo
-
-3. **Recuperación**
-   - Si es validable: Corregir entrada y reintentar
-   - Si es timeout: Aumentar límite temporal y reintentar
-   - Si es BD: Esperar a que DBA resuelva, luego reintentar
-
-4. **Notificación**
-   - Email automático a business-team@bbva.com
-   - Crear issue en Jira si es frecuente
-
----
-
-## Dashboard Recomendado
-
-**Portal NOVA Operaciones → Crear Dashboard**
-
-Paneles sugeridos:
-1. **Estado General** (30s refresh)
-   - Health de cada servicio
-   - Alertas activas
-   - Error count últimos 5 min
-
-2. **Rendimiento** (1 min refresh)
-   - CPU + Memoria de cada pod
-   - Latencia P95 por endpoint
-   - Request rate
-
-3. **Negocio** (5 min refresh)
-   - Transacciones procesadas
-   - Transacciones fallidas
-   - Eventos consumidos (event-processor)
-
-4. **Infraestructura** (2 min refresh)
-   - Pool conexiones BD (Hikari)
-   - Cola RabbitMQ
-   - Threads activos por servicio
-
----
-
-## Contacto y Escalación
-
-- **Problemas técnicos:** oncall-gdpd@bbva.com
-- **Cambios en producción:** Abrir PR en GitHub + Code Review
-- **Mejoras operacionales:** Issues en Jira → Epic: GDPD-Operaciones
+**Última actualización**: 2026-06-09
+**Responsable**: Equipo de Operaciones NOVA
+**Versión**: 1.0.0

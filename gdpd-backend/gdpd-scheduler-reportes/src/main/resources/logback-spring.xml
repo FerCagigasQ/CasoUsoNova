@@ -21,7 +21,7 @@
                 {
                     "app":"${spring.application.name:unknown}",
                     "env":"${spring.profiles.active:unknown}",
-                    "service":"gdpd-event-processor",
+                    "service":"gdpd-scheduler-reportes",
                     "version":"1.0.0"
                 }
             </customFields>
@@ -33,7 +33,6 @@
             <appender-ref ref="CONSOLE"/>
         </root>
         <logger name="org.springframework" level="INFO"/>
-        <logger name="org.apache.activemq" level="WARN"/>
         <logger name="com.bbva.gdpd" level="DEBUG"/>
     </springProfile>
 
@@ -43,7 +42,6 @@
         </root>
         <logger name="com.bbva.gdpd" level="INFO"/>
         <logger name="org.springframework" level="WARN"/>
-        <logger name="org.apache.activemq" level="WARN"/>
     </springProfile>
 
 </configuration>

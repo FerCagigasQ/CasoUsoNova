@@ -1,0 +1,66 @@
+# GDPD Backend — Configuración común de Actuator y Logging
+# Aplicable a todos los servicios backend
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,prometheus,env,threaddump,heapdump
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active:dev}
+      uuaa: GDPD
+
+spring:
+  application:
+    name: ${SPRING_APP_NAME:gdpd-pedidos-api}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5555/gdpddb}
+    username: ${SPRING_DATASOURCE_USERNAME:gdpd}
+    password: ${SPRING_DATASOURCE_PASSWORD:gdpd}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  cloud:
+    config:
+      uri: ${CONFIG_SERVER_URL:http://localhost:8888}
+  sleuth:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.bbva.gdpd: ${LOG_LEVEL_GDPD:DEBUG}
+    org.springframework: INFO
+    org.hibernate: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{correlationId}] - %msg%n"
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: 1.0.0
+    uuaa: GDPD
+  company: BBVA
+  region: NOVA

@@ -1,84 +1,150 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: gdpd-pedidos-api
-  datasource:
-    url: jdbc:postgresql://localhost:5432/novadb
-    username: nova
-    password: nova
-    driver-class-name: org.postgresql.Driver
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQL10Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+        format_sql: true
+        use_sql_comments: true
   cloud:
     config:
-      enabled: false
+      uri: ${CONFIG_SERVER_URI:http://localhost:8888}
+      fail-fast: true
     stream:
       bindings:
-        pedidosOutput-out-0:
+        pedidos-events-in-0:
           destination: pedidos-events
+          group: gdpd-pedidos-api
           content-type: application/json
-      rabbit:
-        bindings:
-          pedidosOutput-out-0:
-            producer:
-              auto-bind-dlq: true
-              republish-to-dlq: true
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
-
+# Actuator: Health Check, Metrics, Info
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
+      base-path: /actuator
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+    diskspace:
+      threshold: 1GB
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,500ms,1000ms,2000ms
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+---
+# Configuración para entorno DEV/INT
+spring:
+  config:
+    activate:
+      on-profile: dev,int
+  datasource:
+    url: jdbc:postgresql://localhost:5555/gdpddb
+    username: nova
+    password: nova
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  rabbitmq:
+    host: localhost
+    port: 61616
+    username: guest
+    password: guest
 
 logging:
   level:
+    root: INFO
     com.bbva.gdpd: DEBUG
-    org.springframework.cloud.stream: INFO
+    org.springframework: INFO
+    org.hibernate: WARN
+
+eureka:
+  client:
+    enabled: false
 
 ---
+# Configuración para entorno PRE
+spring:
+  config:
+    activate:
+      on-profile: pre
+  datasource:
+    url: jdbc:postgresql://db-pre.nova:5432/gdpddb
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+
+  rabbitmq:
+    host: activemq-pre.nova
+    port: 61616
+    username: ${BROKER_USER}
+    password: ${BROKER_PASSWORD}
+
+logging:
+  level:
+    root: WARN
+    com.bbva.gdpd: INFO
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-pre.nova:8761/eureka/
+
+---
+# Configuración para entorno PRODUCCIÓN
 spring:
   config:
     activate:
       on-profile: pro
+  datasource:
+    url: jdbc:postgresql://db-pro.nova:5432/gdpddb
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+
   rabbitmq:
-    host: rabbitmq-cluster.nova.internal
-    port: 5672
-    username: ${RABBIT_USER}
-    password: ${RABBIT_PASS}
-    virtual-host: /nova
-    connection-timeout: 5000
-  cloud:
-    stream:
-      bindings:
-        pedidosOutput-out-0:
-          destination: pedidos-events
-          content-type: application/json
-      rabbit:
-        bindings:
-          pedidosOutput-out-0:
-            producer:
-              auto-bind-dlq: true
-              republish-to-dlq: true
-              delivery-mode: PERSISTENT
+    host: activemq-prod.nova
+    port: 61616
+    username: ${BROKER_USER}
+    password: ${BROKER_PASSWORD}
+    ssl: true
+
+logging:
+  level:
+    root: WARN
+    com.bbva.gdpd: INFO
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-prod.nova:8761/eureka/

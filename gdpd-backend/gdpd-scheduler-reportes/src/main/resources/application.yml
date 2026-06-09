@@ -1,28 +1,56 @@
-server:
-  port: 8083
 spring:
   application:
     name: gdpd-scheduler-reportes
   cloud:
     config:
-      enabled: false
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    prefer-ip-address: true
+      uri: ${CONFIG_SERVER_URI:http://localhost:8888}
+      fail-fast: true
+
+# Actuator
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+server:
+  port: 9082
+
+# Scheduling (cron jobs)
+scheduling:
+  enabled: true
+  jobs:
+    reporte-diario:
+      cron: "0 20 * * MON-FRI"
+      timezone: Europe/Madrid
+      enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev,int
+
 logging:
   level:
+    root: INFO
     com.bbva.gdpd: DEBUG
-gdpd:
-  batch:
-    service:
-      url: http://gdpd-batch-reportes
-    reportes:
-      cron: "0 0 1 * * MON-FRI"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pre,pro
+
+logging:
+  level:
+    root: WARN
+    com.bbva.gdpd: INFO
