@@ -1,0 +1,114 @@
+---
+# NOVA Product Configuration — GDPD (Gestión de Pedidos)
+# UUAA: GDPD | Version: 1.0.0
+
+producto:
+  nombre: gdpd
+  descripcion: Gestión de Pedidos — Sistema central para administración del ciclo de vida de pedidos en NOVA COSMOS BBVA
+  version: 1.0.0
+  uuaa: GDPD
+
+subsistemas:
+  backend:
+    nombre: gdpd-backend
+    descripcion: Servicios backend (API REST, Demonio, Batch, Scheduler)
+    servicios:
+      - nombre: gdpd-pedidos-api
+        tipo: api
+        puerto: 8080
+        tecnologia: java11
+        spring_boot: 2.7.18
+
+      - nombre: gdpd-event-processor
+        tipo: demon
+        tecnologia: java11
+        spring_boot: 2.7.18
+
+      - nombre: gdpd-report-batch
+        tipo: batch
+        tecnologia: java11
+        spring_boot: 2.7.18
+
+      - nombre: gdpd-report-scheduler
+        tipo: scheduler
+        tecnologia: java11
+        spring_boot: 2.7.18
+
+  frontend:
+    nombre: gdpd-frontend
+    descripcion: Frontend Thin3/Angular (SPA corporativa)
+    servicios:
+      - nombre: gdpd-pedidos-front
+        tipo: frontal
+        tecnologia: angular12
+        node: "16"
+
+dependencias:
+  brokers:
+    - nombre: pedidos-events
+      tipo: queue
+      descripcion: Canal de eventos de pedidos (API → Demonio)
+  config:
+    spring_cloud_config: true
+    eureka: true
+
+propiedades:
+  - nombre: spring.datasource.url
+    entorno:
+      dev: jdbc:postgresql://localhost:5555/gdpddb
+      int: jdbc:postgresql://db-int.nova:5432/gdpddb
+      pre: jdbc:postgresql://db-pre.nova:5432/gdpddb
+      pro: jdbc:postgresql://db-pro.nova:5432/gdpddb
+
+  - nombre: broker.url
+    entorno:
+      dev: tcp://localhost:61616
+      int: tcp://activemq-int.nova:61616
+      pre: tcp://activemq-pre.nova:61616
+      pro: tcp://activemq-pro.nova:61616
+
+recursos:
+  gdpd-pedidos-api:
+    cpu: 512m
+    memoria: 1Gi
+    replicas:
+      min: 2
+      max: 8
+
+  gdpd-event-processor:
+    cpu: 256m
+    memoria: 512Mi
+    replicas:
+      min: 1
+      max: 4
+
+  gdpd-report-batch:
+    cpu: 1000m
+    memoria: 2Gi
+    replicas:
+      min: 1
+      max: 2
+
+  gdpd-report-scheduler:
+    cpu: 128m
+    memoria: 256Mi
+    replicas:
+      min: 1
+      max: 1
+
+  gdpd-pedidos-front:
+    cpu: 100m
+    memoria: 128Mi
+    replicas:
+      min: 2
+      max: 6
+
+runtime:
+  local:
+    servicios:
+      postgresql: {puerto: 5555}
+      activemq: {puerto: 8161}
+      api_gateway: {puerto: 24000}
+      config_server: {puerto: 8888}
+      webseal_mock: {puerto: 23000}
+      ces_mock: {puerto: 36000}
