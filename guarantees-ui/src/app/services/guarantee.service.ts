@@ -1,21 +1,24 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Guarantee, CreateGuaranteeRequest, UpdateGuaranteeRequest, Amendment, Claim } from '../models/guarantee.model';
+import { Guarantee, CreateGuaranteeRequest, Amendment, Claim, Applicant, Beneficiary, IssuingBank } from '../models/guarantee.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GuaranteeService {
-  private apiUrl = '/api/guarantees';
+  private readonly apiUrl = '/api/v1/guarantees';
 
   constructor(private http: HttpClient) {}
 
-  getAll(page: number = 0, size: number = 10): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}?page=${page}&size=${size}`);
+  getAll(status?: string, type?: string): Observable<Guarantee[]> {
+    let params = '';
+    if (status) params += `?status=${status}`;
+    if (type) params += `${params ? '&' : '?'}type=${type}`;
+    return this.http.get<Guarantee[]>(`${this.apiUrl}${params}`);
   }
 
-  getById(id: string): Observable<Guarantee> {
+  getById(id: number): Observable<Guarantee> {
     return this.http.get<Guarantee>(`${this.apiUrl}/${id}`);
   }
 
@@ -23,19 +26,35 @@ export class GuaranteeService {
     return this.http.post<Guarantee>(this.apiUrl, request);
   }
 
-  update(id: string, request: UpdateGuaranteeRequest): Observable<Guarantee> {
+  update(id: number, request: Partial<CreateGuaranteeRequest>): Observable<Guarantee> {
     return this.http.put<Guarantee>(`${this.apiUrl}/${id}`, request);
   }
 
-  delete(id: string): Observable<void> {
+  delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  addAmendment(id: string, amendment: Amendment): Observable<Guarantee> {
+  issue(id: number): Observable<Guarantee> {
+    return this.http.post<Guarantee>(`${this.apiUrl}/${id}/issue`, {});
+  }
+
+  addAmendment(id: number, amendment: Partial<Amendment>): Observable<Guarantee> {
     return this.http.post<Guarantee>(`${this.apiUrl}/${id}/amendments`, amendment);
   }
 
-  addClaim(id: string, claim: Claim): Observable<Guarantee> {
+  addClaim(id: number, claim: Partial<Claim>): Observable<Guarantee> {
     return this.http.post<Guarantee>(`${this.apiUrl}/${id}/claims`, claim);
+  }
+
+  getApplicants(): Observable<Applicant[]> {
+    return this.http.get<Applicant[]>('/api/v1/applicants');
+  }
+
+  getBeneficiaries(): Observable<Beneficiary[]> {
+    return this.http.get<Beneficiary[]>('/api/v1/beneficiaries');
+  }
+
+  getIssuingBanks(): Observable<IssuingBank[]> {
+    return this.http.get<IssuingBank[]>('/api/v1/issuing-banks');
   }
 }

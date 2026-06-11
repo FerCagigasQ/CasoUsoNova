@@ -1,165 +1,146 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule,
-    MatTooltipModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { GuaranteeService } from '../../services/guarantee.service';
-import { Guarantee } from '../../models/guarantee.model';
+import { Guarantee, GuaranteeStatus, GuaranteeType } from '../../models/guarantee.model';
 
 @Component({
   selector: 'app-guarantee-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     RouterLink,
+    FormsModule,
     MatTableModule,
-    MatPaginatorModule,
     MatButtonModule,
+    MatIconModule,
     MatInputModule,
     MatFormFieldModule,
-    MatIconModule,
+    MatSelectModule,
     MatProgressSpinnerModule,
-    MatTooltipModule
+    MatChipsModule,
+    MatToolbarModule
   ],
   template: `
-    <div class="guarantee-list-container">
-      <div class="header">
-        <h1>Guarantees</h1>
-        <button mat-raised-button color="primary" routerLink="/new">
-          <mat-icon>add</mat-icon> New Guarantee
-        </button>
-      </div>
+    <mat-toolbar color="primary">
+      <span>Trade Finance — Bank Guarantees (URDG 758)</span>
+      <span class="spacer"></span>
+      <button mat-raised-button color="accent" [routerLink]="['/guarantees/new']">
+        + Nueva Garantía
+      </button>
+    </mat-toolbar>
 
+    <div class="container">
       <div class="filters">
         <mat-form-field>
-          <mat-label>Search</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (keyup)="onSearch()">
+          <mat-label>Estado</mat-label>
+          <mat-select [(ngModel)]="filterStatus" (selectionChange)="loadGuarantees()">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="DRAFT">DRAFT</mat-option>
+            <mat-option value="ISSUED">ISSUED</mat-option>
+            <mat-option value="AMENDED">AMENDED</mat-option>
+            <mat-option value="CLAIMED">CLAIMED</mat-option>
+            <mat-option value="EXPIRED">EXPIRED</mat-option>
+            <mat-option value="CANCELLED">CANCELLED</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Tipo</mat-label>
+          <mat-select [(ngModel)]="filterType" (selectionChange)="loadGuarantees()">
+            <mat-option value="">Todos</mat-option>
+            <mat-option value="PERFORMANCE">PERFORMANCE</mat-option>
+            <mat-option value="ADVANCE_PAYMENT">ADVANCE PAYMENT</mat-option>
+            <mat-option value="BID_BOND">BID BOND</mat-option>
+            <mat-option value="WARRANTY">WARRANTY</mat-option>
+          </mat-select>
         </mat-form-field>
       </div>
 
-      <div class="table-container">
-        <table mat-table [dataSource]="guarantees" class="guarantee-table">
-          <ng-container matColumnDef="number">
-            <th mat-header-cell *matHeaderCellDef>Number</th>
-            <td mat-cell *matCellDef="let element">{{ element.number }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="description">
-            <th mat-header-cell *matHeaderCellDef>Description</th>
-            <td mat-cell *matCellDef="let element">{{ element.description }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="beneficiary">
-            <th mat-header-cell *matHeaderCellDef>Beneficiary</th>
-            <td mat-cell *matCellDef="let element">{{ element.beneficiary }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="amount">
-            <th mat-header-cell *matHeaderCellDef>Amount</th>
-            <td mat-cell *matCellDef="let element">{{ element.amount | currency }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let element">
-              <span [class]="'status-' + element.status.toLowerCase()">
-                {{ element.status }}
-              </span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let element">
-              <button mat-icon-button routerLink="['/detail', element.id]">
-                <mat-icon>visibility</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-      </div>
-
-      <mat-paginator
-        [length]="totalItems"
-        [pageSize]="pageSize"
-        [pageSizeOptions]="pageSizeOptions"
-        (page)="onPageChange($event)">
-      </mat-paginator>
-
-      <div *ngIf="loading" class="loading">
+      <div *ngIf="loading" class="spinner-container">
         <mat-spinner></mat-spinner>
       </div>
+
+      <table mat-table [dataSource]="guarantees" class="mat-elevation-z4 full-width" *ngIf="!loading">
+        <ng-container matColumnDef="reference">
+          <th mat-header-cell *matHeaderCellDef>Referencia</th>
+          <td mat-cell *matCellDef="let element">{{ element.reference }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Tipo</th>
+          <td mat-cell *matCellDef="let element">{{ element.type }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>Importe</th>
+          <td mat-cell *matCellDef="let element">{{ element.amount | number:'1.2-2' }} {{ element.currency }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="beneficiary">
+          <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+          <td mat-cell *matCellDef="let element">{{ element.beneficiary.name }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let element">
+            <mat-chip [class]="'status-chip status-' + element.status.toLowerCase()">
+              {{ element.status }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="expiryDate">
+          <th mat-header-cell *matHeaderCellDef>Vencimiento</th>
+          <td mat-cell *matCellDef="let element">{{ element.expiryDate }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Acciones</th>
+          <td mat-cell *matCellDef="let element">
+            <button mat-icon-button [routerLink]="['/guarantees', element.id]">
+              <mat-icon>visibility</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
     </div>
   `,
   styles: [`
-    .guarantee-list-container {
-      padding: 20px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .filters {
-      margin-bottom: 20px;
-    }
-
-    .table-container {
-      overflow-x: auto;
-      background: white;
-      border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .guarantee-table {
-      width: 100%;
-    }
-
-    .status-active {
-      color: #4caf50;
-      font-weight: bold;
-    }
-
-    .status-expired {
-      color: #ff9800;
-      font-weight: bold;
-    }
-
-    .status-cancelled {
-      color: #f44336;
-      font-weight: bold;
-    }
-
-    .loading {
-      display: flex;
-      justify-content: center;
-      padding: 40px;
-    }
+    .spacer { flex: 1; }
+    .container { padding: 24px; }
+    .filters { display: flex; gap: 16px; margin-bottom: 16px; }
+    .full-width { width: 100%; }
+    .spinner-container { display: flex; justify-content: center; padding: 40px; }
+    .status-chip { font-size: 11px; font-weight: 600; }
+    .status-draft { background-color: #e3f2fd; color: #1565c0; }
+    .status-issued { background-color: #e8f5e9; color: #2e7d32; }
+    .status-amended { background-color: #fff3e0; color: #e65100; }
+    .status-claimed { background-color: #fce4ec; color: #c62828; }
+    .status-expired { background-color: #f5f5f5; color: #616161; }
+    .status-cancelled { background-color: #fafafa; color: #9e9e9e; }
   `]
 })
 export class GuaranteeListComponent implements OnInit {
   guarantees: Guarantee[] = [];
-  displayedColumns = ['number', 'description', 'beneficiary', 'amount', 'status', 'actions'];
-  searchTerm = '';
-  page = 0;
-  pageSize = 10;
-  pageSizeOptions = [5, 10, 25, 50];
-  totalItems = 0;
+  displayedColumns = ['reference', 'type', 'amount', 'beneficiary', 'status', 'expiryDate', 'actions'];
   loading = false;
+  filterStatus = '';
+  filterType = '';
 
   constructor(private guaranteeService: GuaranteeService) {}
 
@@ -169,10 +150,9 @@ export class GuaranteeListComponent implements OnInit {
 
   loadGuarantees(): void {
     this.loading = true;
-    this.guaranteeService.getAll(this.page, this.pageSize).subscribe({
+    this.guaranteeService.getAll(this.filterStatus || undefined, this.filterType || undefined).subscribe({
       next: (data) => {
-        this.guarantees = data.content || data;
-        this.totalItems = data.totalElements || this.guarantees.length;
+        this.guarantees = data;
         this.loading = false;
       },
       error: (error) => {
@@ -180,16 +160,5 @@ export class GuaranteeListComponent implements OnInit {
         this.loading = false;
       }
     });
-  }
-
-  onSearch(): void {
-    this.page = 0;
-    this.loadGuarantees();
-  }
-
-  onPageChange(event: PageEvent): void {
-    this.page = event.pageIndex;
-    this.pageSize = event.pageSize;
-    this.loadGuarantees();
   }
 }

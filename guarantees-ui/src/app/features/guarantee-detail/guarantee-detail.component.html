@@ -1,99 +1,103 @@
-<div class="detail-container">
-  <div class="header">
-    <button mat-icon-button routerLink="/">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <h1>{{ guarantee?.number }}</h1>
-  </div>
+<mat-toolbar color="primary">
+  <button mat-icon-button [routerLink]="['/guarantees']">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <span>Detalle de Garantia</span>
+</mat-toolbar>
 
-  <div *ngIf="loading" class="loading">
-    <mat-spinner></mat-spinner>
-  </div>
+<div class="container" *ngIf="!loading && guarantee">
+  <mat-card class="detail-card">
+    <mat-card-header>
+      <mat-card-title>{{ guarantee.reference }}</mat-card-title>
+      <mat-card-subtitle>
+        <span [class]="'status-badge status-' + guarantee.status.toLowerCase()">
+          {{ guarantee.status }}
+        </span>
+      </mat-card-subtitle>
+    </mat-card-header>
 
-  <div *ngIf="guarantee && !loading" class="content">
-    <div class="info-section">
-      <h2>Details</h2>
+    <mat-card-content>
       <div class="info-grid">
-        <div class="info-item">
-          <label>Description:</label>
-          <span>{{ guarantee.description }}</span>
-        </div>
-        <div class="info-item">
-          <label>Beneficiary:</label>
-          <span>{{ guarantee.beneficiary }}</span>
-        </div>
-        <div class="info-item">
-          <label>Amount:</label>
-          <span>{{ guarantee.amount | currency }}</span>
-        </div>
-        <div class="info-item">
-          <label>Status:</label>
-          <span [class]="'status-' + guarantee.status.toLowerCase()">{{ guarantee.status }}</span>
-        </div>
-        <div class="info-item">
-          <label>Start Date:</label>
-          <span>{{ guarantee.startDate | date }}</span>
-        </div>
-        <div class="info-item">
-          <label>End Date:</label>
-          <span>{{ guarantee.endDate | date }}</span>
-        </div>
+        <div><strong>Tipo:</strong> {{ guarantee.type }}</div>
+        <div><strong>Importe:</strong> {{ guarantee.amount | number:'1.2-2' }} {{ guarantee.currency }}</div>
+        <div><strong>Fecha emision:</strong> {{ guarantee.issueDate }}</div>
+        <div><strong>Fecha vencimiento:</strong> {{ guarantee.expiryDate }}</div>
+        <div><strong>Ordenante:</strong> {{ guarantee.applicant?.name }}</div>
+        <div><strong>Beneficiario:</strong> {{ guarantee.beneficiary?.name }}</div>
+        <div><strong>Banco emisor:</strong> {{ guarantee.issuingBank?.name }} ({{ guarantee.issuingBank?.bic }})</div>
       </div>
-    </div>
+    </mat-card-content>
 
-    <mat-tab-group>
-      <mat-tab label="Amendments">
-        <div class="tab-content">
-          <button mat-raised-button color="accent" (click)="openAmendmentDialog()">
-            <mat-icon>add</mat-icon> New Amendment
-          </button>
-          <table mat-table [dataSource]="guarantee.amendments" class="amendments-table">
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>Date</th>
-              <td mat-cell *matCellDef="let element">{{ element.date | date }}</td>
-            </ng-container>
-            <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>Type</th>
-              <td mat-cell *matCellDef="let element">{{ element.type }}</td>
-            </ng-container>
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef>Description</th>
-              <td mat-cell *matCellDef="let element">{{ element.description }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="['date','type','description']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['date','type','description'];"></tr>
-          </table>
-          <div *ngIf="guarantee.amendments.length === 0" class="no-data">No amendments</div>
-        </div>
-      </mat-tab>
-      <mat-tab label="Claims">
-        <div class="tab-content">
-          <button mat-raised-button color="accent" (click)="openClaimDialog()">
-            <mat-icon>add</mat-icon> New Claim
-          </button>
-          <table mat-table [dataSource]="guarantee.claims" class="claims-table">
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>Date</th>
-              <td mat-cell *matCellDef="let element">{{ element.date | date }}</td>
-            </ng-container>
-            <ng-container matColumnDef="amount">
-              <th mat-header-cell *matHeaderCellDef>Amount</th>
-              <td mat-cell *matCellDef="let element">{{ element.amount | currency }}</td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let element">{{ element.status }}</td>
-            </ng-container>
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef>Description</th>
-              <td mat-cell *matCellDef="let element">{{ element.description }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="['date','amount','status','description']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['date','amount','status','description'];"></tr>
-          </table>
-          <div *ngIf="guarantee.claims.length === 0" class="no-data">No claims</div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-  </div>
+    <mat-card-actions>
+      <button mat-raised-button color="primary"
+              *ngIf="guarantee.status === 'DRAFT'"
+              (click)="issueGuarantee()">
+        Emitir
+      </button>
+      <button mat-raised-button color="accent"
+              *ngIf="guarantee.status === 'ISSUED' || guarantee.status === 'AMENDED'"
+              (click)="openAmendmentDialog()">
+        Crear enmienda
+      </button>
+      <button mat-raised-button color="warn"
+              *ngIf="guarantee.status === 'ISSUED' || guarantee.status === 'AMENDED'"
+              (click)="openClaimDialog()">
+        Registrar reclamacion
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-tab-group class="tabs">
+    <mat-tab [label]="'Enmiendas (' + (guarantee.amendments?.length || 0) + ')'">
+      <div class="tab-content">
+        <p *ngIf="!guarantee.amendments?.length">No hay enmiendas.</p>
+        <table mat-table [dataSource]="guarantee.amendments || []" *ngIf="guarantee.amendments?.length" class="full-width">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let a">{{ a.amendmentDate }}</td>
+          </ng-container>
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef>Descripcion</th>
+            <td mat-cell *matCellDef="let a">{{ a.description }}</td>
+          </ng-container>
+          <ng-container matColumnDef="newAmount">
+            <th mat-header-cell *matHeaderCellDef>Nuevo importe</th>
+            <td mat-cell *matCellDef="let a">{{ a.newAmount }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="amendmentColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: amendmentColumns;"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <mat-tab [label]="'Reclamaciones (' + (guarantee.claims?.length || 0) + ')'">
+      <div class="tab-content">
+        <p *ngIf="!guarantee.claims?.length">No hay reclamaciones.</p>
+        <table mat-table [dataSource]="guarantee.claims || []" *ngIf="guarantee.claims?.length" class="full-width">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let c">{{ c.claimDate }}</td>
+          </ng-container>
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef>Importe</th>
+            <td mat-cell *matCellDef="let c">{{ c.claimedAmount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let c">{{ c.status }}</td>
+          </ng-container>
+          <ng-container matColumnDef="reason">
+            <th mat-header-cell *matHeaderCellDef>Motivo</th>
+            <td mat-cell *matCellDef="let c">{{ c.reason }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="claimColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: claimColumns;"></tr>
+        </table>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+
+<div *ngIf="loading" class="spinner-container">
+  <mat-spinner></mat-spinner>
 </div>
