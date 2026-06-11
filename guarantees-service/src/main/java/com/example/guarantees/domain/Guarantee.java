@@ -1,6 +1,6 @@
 package com.example.guarantees.domain;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -43,10 +43,10 @@ public class Guarantee {
 
     private String description;
 
-    @OneToMany(mappedBy = "guarantee", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "guarantee", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Amendment> amendments = new HashSet<>();
 
-    @OneToMany(mappedBy = "guarantee", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "guarantee", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Set<Claim> claims = new HashSet<>();
 
     public Guarantee() {}
