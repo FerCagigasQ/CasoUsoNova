@@ -8,8 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule,
-    MatTooltipModule } from '@angular/material/progress-spinner';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { GuaranteeService } from '../../services/guarantee.service';
 import { Guarantee } from '../../models/guarantee.model';
 
@@ -33,7 +33,7 @@ import { Guarantee } from '../../models/guarantee.model';
     <div class="guarantee-list-container">
       <div class="header">
         <h1>Guarantees</h1>
-        <button mat-raised-button color="primary" routerLink="/new">
+        <button mat-raised-button color="primary" [routerLink]="['/guarantees/new']">
           <mat-icon>add</mat-icon> New Guarantee
         </button>
       </div>
@@ -79,7 +79,7 @@ import { Guarantee } from '../../models/guarantee.model';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>Actions</th>
             <td mat-cell *matCellDef="let element">
-              <button mat-icon-button routerLink="['/detail', element.id]">
+              <button mat-icon-button [routerLink]="['/guarantees', element.id]">
                 <mat-icon>visibility</mat-icon>
               </button>
             </td>
