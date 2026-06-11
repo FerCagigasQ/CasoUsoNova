@@ -17,7 +17,7 @@ RUN mvn clean package -DskipTests
 # Stage 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache wget
 
 WORKDIR /app
 
