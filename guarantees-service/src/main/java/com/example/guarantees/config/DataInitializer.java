@@ -2,7 +2,7 @@ package com.example.guarantees.config;
 
 import com.example.guarantees.domain.*;
 import com.example.guarantees.repository.*;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;

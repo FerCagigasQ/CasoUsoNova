@@ -1,6 +1,6 @@
 package com.example.guarantees.domain;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
 
