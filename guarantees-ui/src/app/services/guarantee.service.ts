@@ -7,7 +7,7 @@ import { Guarantee, CreateGuaranteeRequest, UpdateGuaranteeRequest, Amendment, C
   providedIn: 'root'
 })
 export class GuaranteeService {
-  private apiUrl = '/api/guarantees';
+  private apiUrl = '/api/v1/guarantees';
 
   constructor(private http: HttpClient) {}
 
