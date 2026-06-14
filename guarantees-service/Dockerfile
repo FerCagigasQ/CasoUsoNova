@@ -19,8 +19,8 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Install wget
-RUN apk add --no-cache wget
+# Install wget and curl (curl needed for docker-compose healthcheck)
+RUN apk add --no-cache wget curl
 
 # Copy the JAR from builder stage
 COPY --from=build /app/target/guarantees-service-*.jar app.jar
