@@ -16,15 +16,15 @@ public class Guarantee {
     @Column(nullable = false, unique = true)
     private String referenceNumber;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "applicant_id")
     private Applicant applicant;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "beneficiary_id")
     private Beneficiary beneficiary;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "issuing_bank_id")
     private IssuingBank issuingBank;
 

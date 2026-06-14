@@ -19,6 +19,9 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Install wget
+RUN apk add --no-cache wget
+
 # Copy the JAR from builder stage
 COPY --from=build /app/target/guarantees-service-*.jar app.jar
 

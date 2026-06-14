@@ -1,8 +1,8 @@
 package com.example.guarantees.domain;
 
 public enum GuaranteeStatus {
+    DRAFT,
     ISSUED,
-    ACTIVE,
     AMENDED,
     EXPIRED,
     CLAIMED,

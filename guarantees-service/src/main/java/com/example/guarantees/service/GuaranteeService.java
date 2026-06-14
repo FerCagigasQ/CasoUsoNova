@@ -88,7 +88,7 @@ public class GuaranteeService {
     public GuaranteeDTO issueGuarantee(Long id) {
         Guarantee guarantee = guaranteeRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Guarantee not found"));
-        guarantee.setStatus(GuaranteeStatus.ACTIVE);
+        guarantee.setStatus(GuaranteeStatus.ISSUED);
         guarantee.setIssueDate(LocalDate.now());
         Guarantee updated = guaranteeRepository.save(guarantee);
         return toDTO(updated);

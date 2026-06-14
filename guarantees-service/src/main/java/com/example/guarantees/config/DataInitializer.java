@@ -59,11 +59,11 @@ public class DataInitializer {
 
         // Create 6 guarantees in various states
         Guarantee g1 = new Guarantee("GUAR-2024-001", applicant1, beneficiary1, bank1,
-            new BigDecimal("100000.00"), LocalDate.of(2024, 1, 15), LocalDate.of(2025, 1, 15), GuaranteeStatus.ACTIVE);
+            new BigDecimal("100000.00"), LocalDate.of(2024, 1, 15), LocalDate.of(2025, 1, 15), GuaranteeStatus.ISSUED);
         g1.setDescription("Trade finance guarantee");
 
         Guarantee g2 = new Guarantee("GUAR-2024-002", applicant2, beneficiary2, bank2,
-            new BigDecimal("250000.00"), LocalDate.of(2024, 2, 20), LocalDate.of(2026, 2, 20), GuaranteeStatus.ACTIVE);
+            new BigDecimal("250000.00"), LocalDate.of(2024, 2, 20), LocalDate.of(2026, 2, 20), GuaranteeStatus.DRAFT);
         g2.setDescription("Performance bond");
 
         Guarantee g3 = new Guarantee("GUAR-2024-003", applicant3, beneficiary3, bank3,
