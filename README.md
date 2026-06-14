@@ -1,5 +1,14 @@
 # Trade Finance — Bank Guarantees Demo
 
+> ⚠️ **AVISO PARA AGENTES: ESTE REPO SE BORRA Y RECREA CONTINUAMENTE**
+>
+> Este repositorio se usa como caso de prueba iterativo. El contenido se elimina
+> periódicamente y los agentes deben **reconstruir TODO desde cero** cada vez que
+> reciban la tarea. NO asumir que hay código previo. NO marcar como "COMPLETED"
+> sin verificar que `docker compose up --build` funciona end-to-end desde un
+> clone limpio. El README.md es la única constante — el código se genera nuevo
+> en cada iteración.
+
 Aplicación de demo de **Trade Finance** centrada en garantías bancarias internacionales
 (Bank Guarantees / Standby Letters of Credit) bajo terminología **ICC URDG 758**.
 
