@@ -22,8 +22,8 @@
         <div><strong>Importe:</strong> {{ guarantee.amount | number:'1.2-2' }} {{ guarantee.currency }}</div>
         <div><strong>Fecha emision:</strong> {{ guarantee.issueDate }}</div>
         <div><strong>Fecha vencimiento:</strong> {{ guarantee.expiryDate }}</div>
-        <div><strong>Ordenante:</strong> {{ guarantee.applicant?.name }}</div>
-        <div><strong>Beneficiario:</strong> {{ guarantee.beneficiary?.name }}</div>
+        <div><strong>Ordenante:</strong> {{ guarantee.applicant?.firstName }} {{ guarantee.applicant?.lastName }}</div>
+        <div><strong>Beneficiario:</strong> {{ guarantee.beneficiary?.firstName }} {{ guarantee.beneficiary?.lastName }}</div>
         <div><strong>Banco emisor:</strong> {{ guarantee.issuingBank?.name }} ({{ guarantee.issuingBank?.bic }})</div>
       </div>
     </mat-card-content>

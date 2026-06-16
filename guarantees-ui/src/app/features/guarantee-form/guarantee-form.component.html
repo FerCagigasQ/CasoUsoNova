@@ -59,7 +59,7 @@
         <mat-form-field class="full-width">
           <mat-label>Ordenante</mat-label>
           <mat-select formControlName="applicantId">
-            <mat-option *ngFor="let a of applicants" [value]="a.id">{{ a.name }}</mat-option>
+            <mat-option *ngFor="let a of applicants" [value]="a.id">{{ a.firstName }} {{ a.lastName }}</mat-option>
           </mat-select>
           <mat-error *ngIf="form.get('applicantId')?.hasError('required')">Requerido</mat-error>
         </mat-form-field>
@@ -67,7 +67,7 @@
         <mat-form-field class="full-width">
           <mat-label>Beneficiario</mat-label>
           <mat-select formControlName="beneficiaryId">
-            <mat-option *ngFor="let b of beneficiaries" [value]="b.id">{{ b.name }}</mat-option>
+            <mat-option *ngFor="let b of beneficiaries" [value]="b.id">{{ b.firstName }} {{ b.lastName }}</mat-option>
           </mat-select>
           <mat-error *ngIf="form.get('beneficiaryId')?.hasError('required')">Requerido</mat-error>
         </mat-form-field>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Guarantee, CreateGuaranteeRequest, UpdateGuaranteeRequest, Amendment, Claim } from '../models/guarantee.model';
+import { Guarantee, CreateGuaranteeRequest, UpdateGuaranteeRequest, Amendment, Claim, GuaranteeStatus, GuaranteeType } from '../models/guarantee.model';
 
 @Injectable({
   providedIn: 'root'
@@ -11,11 +11,14 @@ export class GuaranteeService {
 
   constructor(private http: HttpClient) {}
 
-  getAll(page: number = 0, size: number = 10): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}?page=${page}&size=${size}`);
+  getAll(status?: GuaranteeStatus | string, type?: GuaranteeType | string): Observable<Guarantee[]> {
+    let params = new HttpParams();
+    if (status) params = params.set('status', status);
+    if (type) params = params.set('type', type);
+    return this.http.get<Guarantee[]>(this.apiUrl, { params });
   }
 
-  getById(id: string): Observable<Guarantee> {
+  getById(id: string | number): Observable<Guarantee> {
     return this.http.get<Guarantee>(`${this.apiUrl}/${id}`);
   }
 
@@ -29,6 +32,10 @@ export class GuaranteeService {
 
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  issue(id: string | number): Observable<Guarantee> {
+    return this.http.post<Guarantee>(`${this.apiUrl}/${id}/issue`, {});
   }
 
   addAmendment(id: string, amendment: Amendment): Observable<Guarantee> {

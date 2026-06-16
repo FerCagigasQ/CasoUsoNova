@@ -73,3 +73,15 @@ export interface CreateGuaranteeRequest {
   beneficiary: { id: number };
   issuingBank: { id: number };
 }
+
+export interface UpdateGuaranteeRequest {
+  reference?: string;
+  type?: GuaranteeType;
+  amount?: number;
+  currency?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  applicant?: { id: number };
+  beneficiary?: { id: number };
+  issuingBank?: { id: number };
+}
