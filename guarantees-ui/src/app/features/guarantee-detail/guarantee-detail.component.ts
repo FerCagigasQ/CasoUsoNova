@@ -1,35 +1,27 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
 import { GuaranteeService } from '../../services/guarantee.service';
 import { Guarantee } from '../../models/guarantee.model';
+import { AmendmentDialogComponent } from './amendment-dialog/amendment-dialog.component';
+import { ClaimDialogComponent } from './claim-dialog/claim-dialog.component';
 
 @Component({
   selector: 'app-guarantee-detail',
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
-    MatCardModule,
-    MatButtonModule,
     MatIconModule,
+    MatButtonModule,
     MatTabsModule,
-    MatChipsModule,
-    MatProgressSpinnerModule,
     MatTableModule,
-    MatDialogModule,
-    MatSnackBarModule,
-    MatToolbarModule
+    MatProgressSpinnerModule,
   ],
   templateUrl: './guarantee-detail.component.html',
   styleUrls: ['./guarantee-detail.component.scss']
@@ -37,23 +29,23 @@ import { Guarantee } from '../../models/guarantee.model';
 export class GuaranteeDetailComponent implements OnInit {
   guarantee: Guarantee | null = null;
   loading = false;
-  amendmentColumns = ['date', 'description', 'newAmount'];
-  claimColumns = ['date', 'amount', 'status', 'reason'];
 
   constructor(
     private route: ActivatedRoute,
     private guaranteeService: GuaranteeService,
-    private snackBar: MatSnackBar
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.loadGuarantee(+id);
-    }
+    this.route.params.subscribe(params => {
+      const id = params['id'];
+      if (id) {
+        this.loadGuarantee(id);
+      }
+    });
   }
 
-  loadGuarantee(id: number): void {
+  loadGuarantee(id: string): void {
     this.loading = true;
     this.guaranteeService.getById(id).subscribe({
       next: (data) => {
@@ -67,46 +59,19 @@ export class GuaranteeDetailComponent implements OnInit {
     });
   }
 
-  issueGuarantee(): void {
-    if (!this.guarantee) return;
-    this.guaranteeService.issue(this.guarantee.id).subscribe({
-      next: (data) => {
-        this.guarantee = data;
-        this.snackBar.open('Garantia emitida correctamente', 'OK', { duration: 3000 });
-      },
-      error: () => this.snackBar.open('Error al emitir la garantia', 'OK', { duration: 3000 })
-    });
-  }
-
   openAmendmentDialog(): void {
-    const description = window.prompt('Descripcion de la enmienda:');
-    if (!description || !this.guarantee) return;
-    this.guaranteeService.addAmendment(this.guarantee.id, {
-      description,
-      amendmentDate: new Date().toISOString().split('T')[0]
-    } as any).subscribe({
-      next: (data) => {
-        this.guarantee = data;
-        this.snackBar.open('Enmienda registrada', 'OK', { duration: 3000 });
-      },
-      error: () => this.snackBar.open('Error al registrar enmienda', 'OK', { duration: 3000 })
+    if (!this.guarantee) return;
+    this.dialog.open(AmendmentDialogComponent, {
+      width: '500px',
+      data: { guaranteeId: this.guarantee.id }
     });
   }
 
   openClaimDialog(): void {
-    const reason = window.prompt('Motivo de la reclamacion:');
-    if (!reason || !this.guarantee) return;
-    this.guaranteeService.addClaim(this.guarantee.id, {
-      reason,
-      claimDate: new Date().toISOString().split('T')[0],
-      claimedAmount: this.guarantee.amount,
-      status: 'SUBMITTED'
-    } as any).subscribe({
-      next: (data) => {
-        this.guarantee = data;
-        this.snackBar.open('Reclamacion registrada', 'OK', { duration: 3000 });
-      },
-      error: () => this.snackBar.open('Error al registrar reclamacion', 'OK', { duration: 3000 })
+    if (!this.guarantee) return;
+    this.dialog.open(ClaimDialogComponent, {
+      width: '500px',
+      data: { guaranteeId: this.guarantee.id }
     });
   }
 }
