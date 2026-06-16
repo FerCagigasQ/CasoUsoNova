@@ -7,16 +7,24 @@ export interface IssuingBank {
 
 export interface Applicant {
   id: number;
-  name: string;
-  address: string;
-  country: string;
+  firstName: string;
+  lastName: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  address?: string;
+  country?: string;
 }
 
 export interface Beneficiary {
   id: number;
-  name: string;
-  address: string;
-  country: string;
+  firstName: string;
+  lastName: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  address?: string;
+  country?: string;
 }
 
 export interface Amendment {
@@ -61,7 +69,7 @@ export interface CreateGuaranteeRequest {
   currency: string;
   issueDate: string;
   expiryDate: string;
-  applicantId: number;
-  beneficiaryId: number;
-  issuingBankId: number;
+  applicant: { id: number };
+  beneficiary: { id: number };
+  issuingBank: { id: number };
 }
