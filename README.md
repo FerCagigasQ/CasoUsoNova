@@ -1,305 +1,316 @@
-# Trade Finance — Bank Guarantees Demo
+# NOVA-1: Trade Finance Demo — Bank Guarantees (ICC URDG 758)
 
-> ⚠️ **AVISO PARA AGENTES: ESTE REPO SE BORRA Y RECREA CONTINUAMENTE**
->
-> Este repositorio se usa como caso de prueba iterativo. El contenido se elimina
-> periódicamente y los agentes deben **reconstruir TODO desde cero** cada vez que
-> reciban la tarea. NO asumir que hay código previo. NO marcar como "COMPLETED"
-> sin verificar que `docker compose up --build` funciona end-to-end desde un
-> clone limpio. El README.md es la única constante — el código se genera nuevo
-> en cada iteración.
+A complete demonstration application for **bank guarantees and standby letters of credit** (garantías bancarias / cartas de crédito stand-by) following ICC URDG 758 terminology.
 
-Aplicación de demo de **Trade Finance** centrada en garantías bancarias internacionales
-(Bank Guarantees / Standby Letters of Credit) bajo terminología **ICC URDG 758**.
-
-Construida por un equipo de agentes IA autónomos coordinados vía Paperclip.
+Built with **Spring Boot 3.2.x + Angular 17 + Docker**, deployable with a single command.
 
 ---
 
-## Qué se va a construir
+## Quick Start
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        TRADE FINANCE DEMO                               │
-│                     Bank Guarantees (URDG 758)                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   ┌─────────────────────┐         ┌──────────────────────────────┐     │
-│   │   guarantees-ui      │  HTTP   │   guarantees-service          │     │
-│   │   Angular 17         │────────▶│   Spring Boot 3.2.x           │     │
-│   │   Material Design    │  /api   │   Java 17                     │     │
-│   │   Puerto :4200       │◀────────│   Puerto :8080                │     │
-│   └─────────────────────┘  JSON   │                                │     │
-│                                    │   ┌────────────────────────┐  │     │
-│                                    │   │  H2 Database            │  │     │
-│                                    │   │  En memoria             │  │     │
-│                                    │   │  (datos semilla)        │  │     │
-│                                    │   └────────────────────────┘  │     │
-│                                    │                                │     │
-│                                    │   ┌────────────────────────┐  │     │
-│                                    │   │  Swagger UI             │  │     │
-│                                    │   │  /swagger-ui.html       │  │     │
-│                                    │   └────────────────────────┘  │     │
-│                                    └──────────────────────────────┘     │
-│                                                                         │
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  Docker Compose — todo arranca con: docker compose up --build    │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Modelo de dominio
-
-```
-┌──────────────┐       ┌──────────────────────────────────────────┐
-│  IssuingBank  │       │              Guarantee                    │
-│──────────────│       │──────────────────────────────────────────│
-│ id            │       │ id                                        │
-│ name          │◀──────│ reference (único)                         │
-│ bic (SWIFT)   │  1:N  │ type: PERFORMANCE | ADVANCE_PAYMENT      │
-│ country       │       │        BID_BOND | WARRANTY                │
-└──────────────┘       │ amount (BigDecimal)                       │
-                        │ currency (EUR, USD, GBP)                  │
-┌──────────────┐       │ issueDate                                 │
-│  Applicant    │       │ expiryDate                                │
-│──────────────│       │ status: DRAFT | ISSUED | AMENDED          │
-│ id            │◀──────│         CLAIMED | EXPIRED | CANCELLED     │
-│ name          │  1:N  │                                           │
-│ address       │       └───────────┬───────────────┬──────────────┘
-│ country       │                   │               │
-└──────────────┘                   │ 1:N           │ 1:N
-                                    ▼               ▼
-┌──────────────┐       ┌──────────────┐    ┌──────────────┐
-│ Beneficiary   │       │  Amendment    │    │    Claim      │
-│──────────────│       │──────────────│    │──────────────│
-│ id            │       │ id            │    │ id            │
-│ name          │       │ amendmentDate │    │ claimDate     │
-│ address       │       │ description   │    │ claimedAmount │
-│ country       │       │ newAmount     │    │ status:       │
-└──────────────┘       │ newExpiryDate │    │  SUBMITTED    │
-       ▲                └──────────────┘    │  UNDER_REVIEW │
-       │  1:N                               │  PAID         │
-       └───────── Guarantee                 │  REJECTED     │
-                                            │ reason        │
-                                            └──────────────┘
-```
-
----
-
-## Ciclo de vida de una garantía
-
-```
-                    ┌─────────┐
-                    │  DRAFT   │
-                    └────┬────┘
-                         │ issue()
-                         ▼
-                    ┌─────────┐
-               ┌────│ ISSUED   │────┐
-               │    └────┬────┘    │
-               │         │         │
-         amend()│         │         │ expire()
-               │         │         │
-               ▼         │         ▼
-          ┌─────────┐   │    ┌─────────┐
-          │ AMENDED  │   │    │ EXPIRED  │
-          └────┬────┘   │    └─────────┘
-               │         │
-     submitClaim()  submitClaim()
-               │         │
-               ▼         ▼
-          ┌─────────────────┐
-          │    CLAIMED       │
-          └─────────────────┘
-
-          En cualquier momento:
-          cancel() → CANCELLED
-```
-
----
-
-## API REST
-
-```
-/api/v1
-├── /guarantees
-│   ├── GET          → Listado (filtros: ?status=ISSUED&type=PERFORMANCE)
-│   ├── GET /:id     → Detalle de una garantía
-│   ├── POST         → Crear nueva garantía (estado DRAFT)
-│   ├── PUT /:id     → Actualizar garantía
-│   └── DELETE /:id  → Eliminar garantía
-│
-├── /guarantees/:id/issue
-│   └── POST         → Emitir garantía (DRAFT → ISSUED)
-│
-├── /guarantees/:id/amendments
-│   └── POST         → Crear enmienda (nuevo importe/fecha)
-│
-└── /guarantees/:id/claims
-    ├── GET          → Listar reclamaciones de una garantía
-    └── POST         → Registrar reclamación
-```
-
----
-
-## Pantallas del frontend
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  LISTADO DE GARANTÍAS                           [+ Nueva]       │
-│─────────────────────────────────────────────────────────────────│
-│  Filtros: [Estado ▾] [Tipo ▾]                                   │
-│                                                                  │
-│  Referencia    Tipo          Importe      Beneficiario  Estado   │
-│  ─────────────────────────────────────────────────────────────  │
-│  BG-2024-001  Performance   EUR 500.000  Airbus SE     [ISSUED] │
-│  BG-2024-002  Advance Pay   USD 1.2M     Boeing Co     [DRAFT]  │
-│  BG-2024-003  Bid Bond      GBP 250.000  BAE Systems   [AMENDED]│
-│  BG-2024-004  Warranty      EUR 800.000  Siemens AG    [CLAIMED]│
-│  BG-2024-005  Performance   USD 3.5M     Bechtel Corp  [EXPIRED]│
-│  BG-2024-006  Advance Pay   EUR 150.000  Thales Group  [DRAFT]  │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  DETALLE: BG-2024-001                                           │
-│─────────────────────────────────────────────────────────────────│
-│  Referencia: BG-2024-001          Estado: [ISSUED]              │
-│  Tipo: Performance Guarantee                                     │
-│  Importe: EUR 500.000,00                                        │
-│  Emisión: 2024-01-15   Vencimiento: 2025-01-15                 │
-│                                                                  │
-│  Solicitante: Airbus SE (Francia)                               │
-│  Beneficiario: Boeing Commercial (EEUU)                         │
-│  Banco emisor: BBVA (BBVAESMMXXX)                               │
-│                                                                  │
-│  [Crear Enmienda]  [Registrar Reclamación]                      │
-│                                                                  │
-│  ┌─ Enmiendas ─────┐  ┌─ Reclamaciones ──────┐                 │
-│  │ (ninguna)        │  │ (ninguna)            │                 │
-│  └──────────────────┘  └─────────────────────┘                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Stack tecnológico
-
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| Frontend | Angular (standalone) | 17 |
-| UI Components | Angular Material | 17 |
-| Lenguaje frontend | TypeScript | 5.x |
-| Backend | Spring Boot | 3.2.x |
-| Lenguaje backend | Java | 17 |
-| Build backend | Maven (via Maven Wrapper) | 3.8+ |
-| Base de datos | H2 (en memoria) | Embebida |
-| Documentación API | springdoc-openapi / Swagger UI | 2.x |
-| Validación | Bean Validation (Jakarta) | 3.x |
-| Containerización | Docker + Docker Compose | — |
-| Servidor frontend (prod) | nginx | alpine |
-
----
-
-## Estructura objetivo del repositorio
-
-```
-CasoUsoNova/
-├── README.md                          ← Este fichero
-├── docker-compose.yml                 ← Arranca TODO con un comando
-├── run-local.sh                       ← Arranque sin Docker (Linux/Mac)
-├── run-local.ps1                      ← Arranque sin Docker (Windows)
-│
-├── guarantees-service/                ← Backend Spring Boot
-│   ├── Dockerfile
-│   ├── mvnw / mvnw.cmd / .mvn/       ← Maven Wrapper (NO requiere Maven instalado)
-│   ├── pom.xml
-│   └── src/
-│       ├── main/
-│       │   ├── java/.../
-│       │   │   ├── config/            ← CORS, OpenAPI, etc.
-│       │   │   ├── controller/        ← REST endpoints
-│       │   │   ├── service/           ← Lógica de negocio
-│       │   │   ├── repository/        ← Spring Data JPA
-│       │   │   ├── domain/            ← Entidades JPA
-│       │   │   ├── dto/               ← Data Transfer Objects
-│       │   │   └── mapper/            ← Entity ↔ DTO
-│       │   └── resources/
-│       │       └── application.yml    ← H2, Swagger, CORS
-│       └── test/
-│
-└── guarantees-ui/                     ← Frontend Angular
-    ├── Dockerfile
-    ├── nginx.conf                     ← Proxy /api → backend
-    ├── proxy.conf.json                ← Dev proxy
-    ├── package.json
-    ├── angular.json
-    └── src/
-        ├── app/
-        │   ├── core/                  ← Servicios, modelos, interceptors
-        │   └── features/
-        │       └── guarantees/        ← Listado, detalle, formularios
-        └── environments/
-```
-
----
-
-## Cómo se arranca (objetivo final)
-
-### Con Docker (recomendado — 1 comando)
+### Docker (Recommended - 1 Command)
 
 ```bash
-git clone https://github.com/FerCagigasQ/CasoUsoNova.git
-cd CasoUsoNova
 docker compose up --build
 ```
 
-### Sin Docker
+Then access:
+- **Frontend**: http://localhost (port 80)
+- **Backend API**: http://localhost:8080/api/v1/guarantees
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **H2 Console**: http://localhost:8080/h2-console
 
+### Local Development (No Docker)
+
+**Terminal 1 — Backend**
 ```bash
-# Terminal 1 — Backend
 cd guarantees-service
-./mvnw spring-boot:run
-
-# Terminal 2 — Frontend
-cd guarantees-ui
-npm install && npm start
+./mvnw spring-boot:run  # Linux/Mac
+mvnw.bat spring-boot:run  # Windows
 ```
 
-### URLs de acceso
+**Terminal 2 — Frontend**
+```bash
+cd guarantees-ui
+npm install
+npm start
+```
 
-| Servicio | URL |
-|----------|-----|
-| Frontend | http://localhost:4200 |
-| API REST | http://localhost:8080/api/v1/guarantees |
-| Swagger UI | http://localhost:8080/swagger-ui.html |
-| H2 Console | http://localhost:8080/h2-console |
-
----
-
-## Datos semilla precargados
-
-La aplicación arranca con **6 garantías** en distintos estados para poder hacer la demo inmediatamente:
-
-| Referencia | Tipo | Importe | Beneficiario | Estado |
-|-----------|------|---------|-------------|--------|
-| BG-2024-001 | Performance | EUR 500.000 | Airbus SE | ISSUED |
-| BG-2024-002 | Advance Payment | USD 1.200.000 | Boeing Commercial | DRAFT |
-| BG-2024-003 | Bid Bond | GBP 250.000 | BAE Systems | AMENDED |
-| BG-2024-004 | Warranty | EUR 800.000 | Siemens Energy | CLAIMED |
-| BG-2024-005 | Performance | USD 3.500.000 | Bechtel Corporation | EXPIRED |
-| BG-2024-006 | Advance Payment | EUR 150.000 | Thales Group | DRAFT |
-
-3 bancos emisores, 4 solicitantes, 4 beneficiarios — todos con datos realistas para banca.
+Frontend runs on http://localhost:4200 with proxy to backend.
 
 ---
 
-## Guion de demo (5 minutos)
+## Architecture
 
-1. **Abrir listado** → http://localhost:4200 → Ver las 6 garantías precargadas con colores por estado
-2. **Crear garantía** → Clic "Nueva" → Tipo: Performance, EUR 500.000, Solicitante: Airbus, Beneficiario: Boeing, Banco: BBVA → Guardar → Aparece en estado DRAFT
-3. **Emitir** → Abrir detalle → Clic "Emitir" → Estado cambia a ISSUED
-4. **Enmendar** → Clic "Crear enmienda" → Nuevo importe: EUR 750.000 → Estado cambia a AMENDED
-5. **Reclamar** → Clic "Registrar reclamación" → EUR 200.000 por incumplimiento contractual → Estado cambia a CLAIMED
-6. **API** → Abrir http://localhost:8080/swagger-ui.html → Mostrar documentación completa
+### Backend: Spring Boot 3.2.x + Maven + Java 17
+
+```
+guarantees-service/
+├── src/main/java/com/example/guarantees/
+│   ├── controller/         # REST API endpoints (/api/v1/...)
+│   ├── service/            # Business logic & state transitions
+│   ├── repository/         # Spring Data JPA repositories
+│   ├── domain/             # JPA entities (Guarantee, Amendment, Claim, etc.)
+│   ├── dto/                # Data Transfer Objects for API
+│   └── config/             # Spring configuration (DataInitializer, CORS, OpenAPI)
+├── src/main/resources/
+│   └── application.yml     # H2 database, port 8080, Swagger, Actuator
+├── pom.xml                 # Dependencies (Spring Boot 3.2.5, H2, Actuator, OpenAPI)
+└── Dockerfile              # Multi-stage build (maven:3.9 → eclipse-temurin:17-jre-alpine)
+```
+
+**Key Technologies**:
+- Spring Boot Starter Web, Data JPA, Validation, Actuator
+- H2 in-memory database (ZERO external dependencies)
+- Spring doc OpenAPI (Swagger UI at /swagger-ui.html)
+- Jakarta EE (NOT javax — Spring Boot 3.x requirement)
+- Maven Wrapper (mvnw)
+
+### Frontend: Angular 17 Standalone + Angular Material
+
+```
+guarantees-ui/
+├── src/app/
+│   ├── features/
+│   │   ├── guarantee-list/      # Table with filters (status, type)
+│   │   ├── guarantee-detail/    # Detail view with amendments & claims tabs
+│   │   ├── guarantee-form/      # Create/edit form with dropdowns
+│   │   └── dialogs/             # Amendment & claim dialogs
+│   ├── services/
+│   │   └── guarantee.service.ts # HTTP service with filters & CRUD
+│   ├── models/
+│   │   └── guarantee.model.ts   # TypeScript interfaces matching backend DTOs
+│   ├── app.routes.ts            # Standalone routing
+│   └── app.config.ts            # Angular Material theme (indigo-pink)
+├── angular.json                 # Build config
+├── proxy.conf.json              # Proxy /api → http://localhost:8080
+├── package.json                 # Dependencies (Angular 17, Material, ...)
+├── Dockerfile                   # Multi-stage (node build → nginx serving)
+└── nginx.conf                   # Reverse proxy to backend
+```
+
+**Key Technologies**:
+- Angular 17 standalone (no NgModules)
+- Angular Material (indigo-pink theme)
+- Reactive Forms with validation
+- TypeScript 5.x strict mode
+
+### Persistence: H2 In-Memory
+
+- **No PostgreSQL, RabbitMQ, Eureka, Config Server**
+- Database: jdbc:h2:mem:testdb
+- H2 Console: http://localhost:8080/h2-console
+- Seed data: 6 guarantees in various states (ISSUED, AMENDED, CLAIMED, EXPIRED, DRAFT)
+
+---
+
+## Domain Model (Data Model)
+
+### Guarantee (Main Entity)
+- `id`: auto-increment
+- `reference`: unique identifier (e.g., "BG-2026-001")
+- `type`: enum (PERFORMANCE, ADVANCE_PAYMENT, BID_BOND, WARRANTY)
+- `amount`: BigDecimal
+- `currency`: ISO 4217 (EUR, USD, GBP, etc.)
+- `issueDate`: LocalDate
+- `expiryDate`: LocalDate
+- `status`: enum (DRAFT, ISSUED, AMENDED, CLAIMED, EXPIRED, CANCELLED)
+- **Relations**:
+  - `applicant`: ManyToOne → Applicant (EAGER)
+  - `beneficiary`: ManyToOne → Beneficiary (EAGER)
+  - `issuingBank`: ManyToOne → IssuingBank (EAGER)
+  - `amendments`: OneToMany → Amendment[] (EAGER)
+  - `claims`: OneToMany → Claim[] (EAGER)
+
+### Applicant / Beneficiary (Parties)
+- `id`, `firstName`, `lastName` (NOT just "name")
+- `taxId`, `email`, `phone`
+- `address`, `country`
+
+### IssuingBank (Issuing Bank)
+- `id`, `name`, `bic` (SWIFT BIC code)
+- `country`
+
+### Amendment (Document Modifications)
+- `id`, `guarantee` (FK), `amendmentDate`
+- `description`, `newAmount`, `newExpiryDate`
+
+### Claim (Payment Claims)
+- `id`, `guarantee` (FK), `claimDate`
+- `claimedAmount`, `status` (enum: SUBMITTED, UNDER_REVIEW, PAID, REJECTED)
+- `reason`
+
+---
+
+## REST API (`/api/v1`)
+
+### Guarantees CRUD
+- `GET /guarantees` — List all (supports `?status=ISSUED&type=PERFORMANCE` filters)
+- `GET /guarantees/{id}` — Get one
+- `POST /guarantees` — Create
+- `PUT /guarantees/{id}` — Update
+- `DELETE /guarantees/{id}` — Delete
+
+### Actions (State Transitions)
+- `POST /guarantees/{id}/issue` — DRAFT → ISSUED
+- `POST /guarantees/{id}/amendments` — Add amendment (Guarantee → AMENDED)
+- `POST /guarantees/{id}/claims` — Submit claim (Guarantee → CLAIMED)
+- `GET /guarantees/{id}/claims` — List claims for a guarantee
+
+### Reference Data (for form dropdowns)
+- `GET /applicants` — List applicants
+- `GET /beneficiaries` — List beneficiaries
+- `GET /issuing-banks` — List issuing banks
+
+### Health & Documentation
+- `GET /actuator/health` — Service health
+- `GET /swagger-ui.html` — Interactive API docs
+- `GET /h2-console` — Database console
+
+---
+
+## Deployment Instructions
+
+### Docker (Production-Ready)
+
+```bash
+docker compose up --build
+```
+
+Both services build and start automatically. Backend health check ensures frontend waits for API readiness.
+
+**Ports**:
+- Frontend: 80 (public HTTP)
+- Backend: 8080 (internal to Docker network)
+
+### Local Development
+
+1. **Ensure Java 17 and Node.js 18+ are installed**
+2. **Optional**: Run `run-local.sh` (Linux/Mac) or `run-local.ps1` (Windows) for automatic startup of both services
+3. **Or manually**:
+   ```bash
+   # Terminal 1
+   cd guarantees-service
+   ./mvnw spring-boot:run
+   
+   # Terminal 2
+   cd guarantees-ui
+   npm install && npm start
+   ```
+
+---
+
+## Technology Stack
+
+### Backend
+- **Framework**: Spring Boot 3.2.5
+- **Language**: Java 17
+- **Build**: Maven 3.9
+- **Database**: H2 in-memory
+- **API Documentation**: springdoc-openapi 2.3.0
+- **Health Monitoring**: Spring Boot Actuator
+- **Container**: Docker with multi-stage build (Alpine JRE + wget)
+
+### Frontend
+- **Framework**: Angular 17 (standalone)
+- **UI Library**: Angular Material (indigo-pink)
+- **Language**: TypeScript 5.x
+- **HTTP Client**: Angular HttpClient with proxy
+- **Container**: Docker with multi-stage build (Node → Nginx)
+
+### Infrastructure
+- **Orchestration**: Docker Compose
+- **Development**: npm, Maven Wrapper, Angular CLI
+- **CI/CD**: Ready for Jenkins/GitHub Actions
+
+---
+
+## Known Errors to Avoid (E01-E22)
+
+### Critical Errors
+
+**E01 — Maven Wrapper JAR missing**
+- ✓ Dockerfile uses `FROM maven:3.9-eclipse-temurin-17`, NOT `./mvnw`
+
+**E02 — CRLF line endings in mvnw**
+- ✓ run-local.sh fixes endings: `sed -i 's/\r$//' mvnw`
+
+**E05 — Healthcheck without Actuator**
+- ✓ pom.xml includes spring-boot-starter-actuator
+
+**E06 — curl missing in Alpine**
+- ✓ Dockerfile installs wget: `RUN apk add --no-cache wget`
+
+**E20 — javax.persistence instead of jakarta**
+- ✓ Spring Boot 3.x requires `jakarta.persistence.*`, NOT `javax.persistence.*`
+
+### Frontend-Backend Contract (E11-E18)
+
+**E13/E15 — Field name mismatches**
+- ✓ Backend field: `reference` → Frontend: `guarantee.reference` (NOT `number`)
+- ✓ Backend fields: `issueDate`, `expiryDate` → Frontend: same names (NOT `startDate`/`endDate`)
+- ✓ Nested objects: `beneficiary: Beneficiary` → Frontend: `beneficiary: { firstName, lastName, ... }` (NOT string)
+
+**E18 — CONTRACT-FIRST design**
+- ✓ guarantee.model.ts mirrors backend DTOs exactly
+- ✓ Form uses mat-select to send object IDs, not strings
+
+### Filters (E19)
+
+**E19 — Filters without backend support**
+- ✓ Backend controller accepts `@RequestParam(required=false) String status, String type`
+- ✓ Repository has filter methods: `findByStatus()`, `findByType()`, `findByStatusAndType()`
+- ✓ Frontend sends params: `?status=ISSUED&type=PERFORMANCE`
+
+---
+
+## File Structure
+
+```
+CasoUsoNova/
+├── guarantees-service/           # Backend Spring Boot
+│   ├── pom.xml                   # Maven dependencies
+│   ├── mvnw / mvnw.bat           # Maven Wrapper (development only)
+│   ├── Dockerfile                # Multi-stage build
+│   ├── src/main/java/...         # Java source
+│   └── src/main/resources/       # application.yml
+│
+├── guarantees-ui/                # Frontend Angular
+│   ├── package.json              # npm dependencies
+│   ├── angular.json              # Angular config
+│   ├── Dockerfile                # Multi-stage build
+│   ├── nginx.conf                # Reverse proxy config
+│   ├── proxy.conf.json           # Dev proxy (localhost:4200 → :8080)
+│   └── src/                      # Angular source
+│
+├── docker-compose.yml            # Orchestration (backend + frontend + network)
+├── run-local.sh                  # Linux/Mac startup script
+├── run-local.ps1                 # Windows startup script
+└── README.md                      # This file
+```
+
+---
+
+## Next Steps (Phase 2: Delegation)
+
+The architecture is now defined. Next phase involves:
+
+1. **Backend team** (@nova-service-gen): Implement Spring Boot service, entities, API, Docker
+2. **Frontend team** (@nova-frontend-gen): Implement Angular UI, forms, routing, Docker
+3. **QA team** (@nova-release-mgr): Verify Docker deployment, E2E testing
+4. **All teams**: Follow the 10 consolidated rules (E01-E22) to avoid known errors
+
+---
+
+## Support & References
+
+- **Spring Boot Docs**: https://spring.io/projects/spring-boot
+- **Angular Docs**: https://angular.io/docs
+- **Docker Docs**: https://docs.docker.com
+- **ICC URDG 758**: https://www.iccwbo.org/products-and-services/trade-finance-urdg-758
+
+---
+
+**Status**: Phase 1 Complete — Structure Base Ready  
+**Next**: Phase 2 Delegation to specialist teams  
+**Target**: Single-command Docker deployment (`docker compose up --build`)
