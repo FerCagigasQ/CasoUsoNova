@@ -1,0 +1,135 @@
+@if (loading) {
+  <div class="spinner-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+} @else if (guarantee) {
+  <div class="detail-header">
+    <button mat-button routerLink="/guarantees">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
+    <h2>{{ guarantee.reference }}</h2>
+    <span class="status-chip status-{{ guarantee.status | lowercase }}">{{ guarantee.status }}</span>
+    <span class="spacer"></span>
+    <button mat-raised-button color="primary" (click)="issue()" [disabled]="!canIssue()">
+      <mat-icon>check_circle</mat-icon> Issue
+    </button>
+    <button mat-raised-button (click)="openAmendment()" [disabled]="!canAmend()">
+      <mat-icon>edit_note</mat-icon> Amend
+    </button>
+    <button mat-raised-button color="warn" (click)="openClaim()" [disabled]="!canClaim()">
+      <mat-icon>report</mat-icon> File Claim
+    </button>
+    <button mat-icon-button [routerLink]="['/guarantees', guarantee.id, 'edit']" title="Edit">
+      <mat-icon>edit</mat-icon>
+    </button>
+  </div>
+
+  <mat-tab-group>
+    <!-- Details Tab -->
+    <mat-tab label="Details">
+      <div class="tab-content">
+        <div class="info-grid">
+          <mat-card>
+            <mat-card-header><mat-card-title>Guarantee</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="field"><label>Reference</label><span>{{ guarantee.reference }}</span></div>
+              <div class="field"><label>Type</label><span>{{ guarantee.type }}</span></div>
+              <div class="field"><label>Amount</label><span>{{ guarantee.amount | number:'1.2-2' }} {{ guarantee.currency }}</span></div>
+              <div class="field"><label>Issue Date</label><span>{{ guarantee.issueDate }}</span></div>
+              <div class="field"><label>Expiry Date</label><span>{{ guarantee.expiryDate }}</span></div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header><mat-card-title>Applicant</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="field"><label>Name</label><span>{{ guarantee.applicant.firstName }} {{ guarantee.applicant.lastName }}</span></div>
+              <div class="field"><label>Tax ID</label><span>{{ guarantee.applicant.taxId }}</span></div>
+              <div class="field"><label>Email</label><span>{{ guarantee.applicant.email }}</span></div>
+              <div class="field"><label>Country</label><span>{{ guarantee.applicant.country }}</span></div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header><mat-card-title>Beneficiary</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="field"><label>Name</label><span>{{ guarantee.beneficiary.firstName }} {{ guarantee.beneficiary.lastName }}</span></div>
+              <div class="field"><label>Tax ID</label><span>{{ guarantee.beneficiary.taxId }}</span></div>
+              <div class="field"><label>Email</label><span>{{ guarantee.beneficiary.email }}</span></div>
+              <div class="field"><label>Country</label><span>{{ guarantee.beneficiary.country }}</span></div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card>
+            <mat-card-header><mat-card-title>Issuing Bank</mat-card-title></mat-card-header>
+            <mat-card-content>
+              <div class="field"><label>Name</label><span>{{ guarantee.issuingBank.name }}</span></div>
+              <div class="field"><label>BIC</label><span>{{ guarantee.issuingBank.bic }}</span></div>
+              <div class="field"><label>Country</label><span>{{ guarantee.issuingBank.country }}</span></div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Amendments Tab -->
+    <mat-tab [label]="'Amendments (' + guarantee.amendments.length + ')'">
+      <div class="tab-content">
+        @if (guarantee.amendments.length === 0) {
+          <p class="empty-msg">No amendments recorded.</p>
+        } @else {
+          <table mat-table [dataSource]="guarantee.amendments" class="full-width">
+            <ng-container matColumnDef="amendmentDate">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let a">{{ a.amendmentDate }}</td>
+            </ng-container>
+            <ng-container matColumnDef="description">
+              <th mat-header-cell *matHeaderCellDef>Description</th>
+              <td mat-cell *matCellDef="let a">{{ a.description }}</td>
+            </ng-container>
+            <ng-container matColumnDef="newAmount">
+              <th mat-header-cell *matHeaderCellDef>New Amount</th>
+              <td mat-cell *matCellDef="let a">{{ a.newAmount | number:'1.2-2' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="newExpiryDate">
+              <th mat-header-cell *matHeaderCellDef>New Expiry</th>
+              <td mat-cell *matCellDef="let a">{{ a.newExpiryDate }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="amendmentColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: amendmentColumns;"></tr>
+          </table>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Claims Tab -->
+    <mat-tab [label]="'Claims (' + guarantee.claims.length + ')'">
+      <div class="tab-content">
+        @if (guarantee.claims.length === 0) {
+          <p class="empty-msg">No claims filed.</p>
+        } @else {
+          <table mat-table [dataSource]="guarantee.claims" class="full-width">
+            <ng-container matColumnDef="claimDate">
+              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <td mat-cell *matCellDef="let c">{{ c.claimDate }}</td>
+            </ng-container>
+            <ng-container matColumnDef="claimedAmount">
+              <th mat-header-cell *matHeaderCellDef>Amount</th>
+              <td mat-cell *matCellDef="let c">{{ c.claimedAmount | number:'1.2-2' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let c">{{ c.status }}</td>
+            </ng-container>
+            <ng-container matColumnDef="reason">
+              <th mat-header-cell *matHeaderCellDef>Reason</th>
+              <td mat-cell *matCellDef="let c">{{ c.reason }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="claimColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: claimColumns;"></tr>
+          </table>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

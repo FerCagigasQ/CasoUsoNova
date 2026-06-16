@@ -1,23 +1,11 @@
-# Stage 1: Build
-FROM node:18-alpine AS builder
-
+FROM node:20-alpine AS build
 WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm ci
-
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
 COPY . .
+RUN npm run build
 
-RUN npm run build -- --configuration production
-
-# Stage 2: Runtime
 FROM nginx:alpine
-
-COPY --from=builder /app/dist/guarantees-ui /usr/share/nginx/html
-
-COPY nginx.conf /etc/nginx/nginx.conf
-
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist/guarantees-ui/browser /usr/share/nginx/html
 EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
