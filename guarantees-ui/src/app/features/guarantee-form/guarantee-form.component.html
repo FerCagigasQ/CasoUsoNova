@@ -1,0 +1,91 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>{{ isEdit ? 'Edit Guarantee' : 'New Guarantee' }}</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (loading) {
+      <div class="spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Reference</mat-label>
+          <input matInput formControlName="reference" placeholder="BG-2024-001">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Type</mat-label>
+          <mat-select formControlName="type">
+            @for (t of types; track t) {
+              <mat-option [value]="t">{{ t }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Currency</mat-label>
+          <mat-select formControlName="currency">
+            @for (c of currencies; track c) {
+              <mat-option [value]="c">{{ c }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Amount</mat-label>
+          <input matInput type="number" formControlName="amount" placeholder="500000">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Issue Date</mat-label>
+          <input matInput [matDatepicker]="issuePicker" formControlName="issueDate">
+          <mat-datepicker-toggle matIconSuffix [for]="issuePicker"></mat-datepicker-toggle>
+          <mat-datepicker #issuePicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Expiry Date</mat-label>
+          <input matInput [matDatepicker]="expiryPicker" formControlName="expiryDate">
+          <mat-datepicker-toggle matIconSuffix [for]="expiryPicker"></mat-datepicker-toggle>
+          <mat-datepicker #expiryPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Applicant</mat-label>
+          <mat-select formControlName="applicantId">
+            @for (a of applicants; track a.id) {
+              <mat-option [value]="a.id">{{ a.firstName }} {{ a.lastName }} ({{ a.taxId }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Beneficiary</mat-label>
+          <mat-select formControlName="beneficiaryId">
+            @for (b of beneficiaries; track b.id) {
+              <mat-option [value]="b.id">{{ b.firstName }} {{ b.lastName }} ({{ b.country }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Issuing Bank</mat-label>
+          <mat-select formControlName="issuingBankId">
+            @for (bk of issuingBanks; track bk.id) {
+              <mat-option [value]="bk.id">{{ bk.name }} ({{ bk.bic }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="actions full">
+          <button mat-button type="button" routerLink="/guarantees">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || saving">
+            @if (saving) { <mat-spinner diameter="20"></mat-spinner> }
+            @else { {{ isEdit ? 'Update' : 'Create' }} }
+          </button>
+        </div>
+      </form>
+    }
+  </mat-card-content>
+</mat-card>

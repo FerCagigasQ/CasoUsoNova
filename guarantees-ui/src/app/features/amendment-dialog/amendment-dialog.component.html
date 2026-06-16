@@ -1,0 +1,25 @@
+<h2 mat-dialog-title>File Amendment</h2>
+<mat-dialog-content>
+  <form [formGroup]="form">
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>New Amount</mat-label>
+      <input matInput type="number" formControlName="newAmount">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>New Expiry Date</mat-label>
+      <input matInput [matDatepicker]="picker" formControlName="newExpiryDate">
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" rows="3"></textarea>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="submit()" [disabled]="form.invalid">Submit Amendment</button>
+</mat-dialog-actions>

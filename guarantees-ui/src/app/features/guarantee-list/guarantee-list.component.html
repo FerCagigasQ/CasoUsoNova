@@ -1,0 +1,97 @@
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Bank Guarantees (URDG 758)</mat-card-title>
+    <mat-card-subtitle>{{ guarantees.length }} guarantee(s) found</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Filters -->
+    <div class="filters">
+      <mat-form-field appearance="outline">
+        <mat-label>Status</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onFilterChange()">
+          @for (s of statuses; track s) {
+            <mat-option [value]="s">{{ s || 'All' }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Type</mat-label>
+        <mat-select [(ngModel)]="selectedType" (selectionChange)="onFilterChange()">
+          @for (t of types; track t) {
+            <mat-option [value]="t">{{ t || 'All' }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (loading) {
+      <div class="spinner-container">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+    } @else {
+      <table mat-table [dataSource]="guarantees" class="full-width">
+        <ng-container matColumnDef="reference">
+          <th mat-header-cell *matHeaderCellDef>Reference</th>
+          <td mat-cell *matCellDef="let g">{{ g.reference }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let g">{{ g.type }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="amount">
+          <th mat-header-cell *matHeaderCellDef>Amount</th>
+          <td mat-cell *matCellDef="let g">{{ g.amount | number:'1.2-2' }} {{ g.currency }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="issueDate">
+          <th mat-header-cell *matHeaderCellDef>Issue Date</th>
+          <td mat-cell *matCellDef="let g">{{ g.issueDate }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="expiryDate">
+          <th mat-header-cell *matHeaderCellDef>Expiry Date</th>
+          <td mat-cell *matCellDef="let g">{{ g.expiryDate }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="applicant">
+          <th mat-header-cell *matHeaderCellDef>Applicant</th>
+          <td mat-cell *matCellDef="let g">{{ g.applicant.firstName }} {{ g.applicant.lastName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="beneficiary">
+          <th mat-header-cell *matHeaderCellDef>Beneficiary</th>
+          <td mat-cell *matCellDef="let g">{{ g.beneficiary.firstName }} {{ g.beneficiary.lastName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let g">
+            <span class="status-chip status-{{ g.status | lowercase }}">{{ g.status }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let g">
+            <button mat-icon-button color="primary" [routerLink]="['/guarantees', g.id]" title="View">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button [routerLink]="['/guarantees', g.id, 'edit']" title="Edit">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="delete(g.id)" title="Delete">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    }
+  </mat-card-content>
+</mat-card>
