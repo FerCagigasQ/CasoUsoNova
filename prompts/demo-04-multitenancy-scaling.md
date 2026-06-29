@@ -1,421 +1,178 @@
 # Demo 4: Multi-tenancy & Scaling
 
-**Duration**: 40 minutes | **Complexity**: Advanced  
-**Target Audience**: Enterprise architects, DevOps, CTOs  
+**Development Sprint**: Tenant isolation + load distribution  
+**Estimated Duration**: 6-8 hours  
+**Target**: Multi-instance deployment + load balancing  
 **Agents**: nova-service-gen, nova-release-mgr, nova-ops-monitor, nova-async-comm
 
 ---
 
-## Overview
+## Business Context
 
-This demo shows how the NOVA platform scales to support **multiple independent banks**, each managing their own guarantee portfolio without cross-tenant data leakage. Demonstrates Docker Compose scaling, multi-instance deployment, and load distribution.
-
-### What You'll Show
-- Running multiple backend instances
-- Load balancing across instances
-- Separate data isolation per tenant
-- Database connection pooling
-- Container resource constraints
-- Health monitoring across instances
-
-### Business Value
-- **Multi-bank SaaS model**: BBVA can offer NOVA as a platform service to other banks
-- **Horizontal scalability**: Add instances to handle increased load
-- **Zero-downtime deployment**: Blue-green updates with load balancer
-- **Cost optimization**: Scale up/down based on demand
+The platform should scale horizontally to serve multiple independent banks, each with separate data. This demo shows multi-instance deployment with load balancing.
 
 ---
 
-## Agent Responsibilities
+## Task Breakdown
 
-### nova-service-gen (Backend)
-**Must implement for this demo:**
-- [ ] Tenant context extraction from JWT/request headers
-- [ ] Automatic tenant_id filtering on all queries
-- [ ] Multi-instance state consistency (shared database or event sync)
-- [ ] Tenant-specific configurations (workflows, approval chains)
-- [ ] Audit logging per tenant (who accessed what, when)
+### nova-service-gen (Backend Services)
+
+**Objective**: Add tenant context isolation
+
+**Must deliver**:
+
+1. **Tenant Context**
+   - [ ] Add `tenant_id` column to GUARANTEE, AMENDMENT, CLAIM tables
+   - [ ] Extract tenant from JWT token or `X-Tenant-ID` header in all requests
+   - [ ] Store in `RequestContext` or `ThreadLocal` for current request
+
+2. **Repository Changes**
+   - [ ] Modify all queries: add `.where(guarantee.tenant_id = currentTenant)`
+   - [ ] Example: `repository.findByStatusAndTenant(status, tenantId)`
+   - [ ] Prevent data leakage: queries always filter by tenant
+
+3. **Audit Logging**
+   - [ ] Log all guarantee access: who (userId), when, tenantId, action
+   - [ ] Store in AUDIT_LOG table: userId, tenantId, action, guaranteeId, timestamp
+
+**Success Criteria**:
+- ✅ All queries auto-filter by tenant_id
+- ✅ No cross-tenant data visible
+- ✅ Audit logs show all access
+
+---
 
 ### nova-release-mgr (Docker & CI/CD)
-**Must implement for this demo:**
-- [ ] Docker Compose multi-instance setup (3+ backend containers)
-- [ ] Nginx load balancer configuration (round-robin/least connections)
-- [ ] Blue-green deployment automation
-- [ ] Health check configuration (Actuator endpoints)
-- [ ] Zero-downtime deployment strategy
 
-### nova-ops-monitor (Infrastructure)
-**Must implement for this demo:**
-- [ ] Per-instance metrics: CPU, memory, requests/sec, latency
-- [ ] Prometheus scrape config for multi-instance targets
-- [ ] Grafana dashboard: Instance health, load distribution, response times
-- [ ] Distributed tracing: Jaeger or Spring Cloud Sleuth
-- [ ] Alert on instance failure or high latency
+**Objective**: Configure multi-instance deployment
 
-### nova-async-comm (Messaging)
-**Must implement for this demo:**
-- [ ] RabbitMQ cluster setup (or single broker with tenant-specific exchanges)
-- [ ] Tenant-specific event topics/queues
-- [ ] Event routing by tenant_id
-- [ ] Dead-letter queue handling
+**Must deliver**:
 
----
+1. **Docker Compose Multi-Instance Setup**
+   - [ ] Update docker-compose.yml to run 3 backend instances (ports 8080, 8081, 8082)
+   - [ ] Each instance: separate container, same image, different port mapping
+   - [ ] Shared database: All 3 instances read/write to same H2 (or PostgreSQL)
+   - [ ] Example:
+     ```yaml
+     backend-1:
+       build: ./guarantees-service
+       ports:
+         - "8080:8080"
+     backend-2:
+       build: ./guarantees-service
+       ports:
+         - "8081:8080"
+     backend-3:
+       build: ./guarantees-service
+       ports:
+         - "8082:8080"
+     ```
 
-## Prerequisites (5 minutes)
+2. **Nginx Load Balancer**
+   - [ ] Add nginx service to docker-compose
+   - [ ] Configure: upstream block with 3 backend servers
+   - [ ] Strategy: round-robin or least connections
+   - [ ] Forward requests: `http://localhost:8080` → distributed to backends
+   - [ ] Config file example:
+     ```nginx
+     upstream backend {
+       least_conn;
+       server backend-1:8080;
+       server backend-2:8080;
+       server backend-3:8080;
+     }
+     server {
+       listen 80;
+       location / {
+         proxy_pass http://backend;
+       }
+     }
+     ```
 
-### Scale Up Docker Compose
+3. **Health Checks**
+   - [ ] Configure healthcheck in docker-compose for each backend
+   - [ ] Endpoint: GET /actuator/health
+   - [ ] Interval: 10s, Timeout: 5s, Retries: 3
 
-**Modify docker-compose.yml to run 3 backend instances**:
-```yaml
-version: '3.8'
-services:
-  backend-1:
-    build: ./guarantees-service
-    environment:
-      - SERVER_PORT=8080
-    ports:
-      - "8080:8080"
-  
-  backend-2:
-    build: ./guarantees-service
-    environment:
-      - SERVER_PORT=8080
-    ports:
-      - "8081:8080"
-  
-  backend-3:
-    build: ./guarantees-service
-    environment:
-      - SERVER_PORT=8080
-    ports:
-      - "8082:8080"
-  
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx-lb.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend-1
-      - backend-2
-      - backend-3
-```
+4. **Zero-Downtime Deployment**
+   - [ ] Document blue-green strategy: start 2 new instances, switch LB, kill old ones
+   - [ ] Add deployment script (bash/shell) that automates the process
 
-**Start scaled environment**:
-```bash
-docker-compose up --scale backend=3 --build
-# Or manually edit docker-compose.yml and run:
-docker-compose up --build
-```
+**Success Criteria**:
+- ✅ `docker compose up` starts 3 backends + nginx
+- ✅ All instances healthy
+- ✅ Nginx distributes requests evenly
+- ✅ Deployment script works
 
 ---
 
-## Step-by-Step Guide (35 minutes)
+### nova-ops-monitor (Infrastructure & Observability)
 
-### Step 1: Verify Multi-Instance Deployment (5 min)
+**Objective**: Monitor multi-instance deployment
 
-**Check running containers**:
-```bash
-docker ps | grep guarantees-service
-# Expected output: 3 backend containers (backend-1, backend-2, backend-3)
-```
+**Must deliver**:
 
-**Check health of each instance**:
-```bash
-curl http://localhost:8080/actuator/health  # Instance 1
-curl http://localhost:8081/actuator/health  # Instance 2
-curl http://localhost:8082/actuator/health  # Instance 3
-```
+1. **Per-Instance Metrics**
+   - [ ] Prometheus scrape config: monitor all 3 backends
+   - [ ] Metrics: requests/sec per instance, latency per instance, error rate per instance
+   - [ ] Targets: localhost:8080/actuator/prometheus, :8081/actuator/prometheus, :8082/actuator/prometheus
 
-**Expected**: All return `{"status":"UP"}`
+2. **Grafana Dashboard**
+   - [ ] Dashboard: "Multi-Instance Health"
+   - [ ] Panels:
+     - Request distribution: pie chart showing % requests per instance
+     - Response time per instance: line graph
+     - CPU/Memory per instance: bar chart
+     - Error rate per instance: gauge
 
-**In H2 Console**:
-- Each instance has its own in-memory H2 database
-- Verify: Run `SELECT COUNT(*) FROM GUARANTEE;` on each instance
-- Each shows 6 seed guarantees (separate databases)
+3. **Load Balancer Metrics**
+   - [ ] Monitor nginx: upstream response times, connection counts
+   - [ ] Detect if any instance is slow (outlier detection)
 
-### Step 2: Load Balancer Configuration (5 min)
+4. **Alerts**
+   - [ ] Alert: "Instance X down" (healthcheck failed)
+   - [ ] Alert: "Uneven load distribution" (one instance >80% of traffic)
+   - [ ] Alert: "High error rate on instance Y" (>1% errors)
 
-**Create nginx-lb.conf** for round-robin load balancing:
-```nginx
-upstream backend {
-    least_conn;  # or round_robin
-    server backend-1:8080;
-    server backend-2:8080;
-    server backend-3:8080;
-}
-
-server {
-    listen 80;
-    location / {
-        proxy_pass http://backend;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-**Test load balancer** (requests routed to different instances):
-```bash
-for i in {1..6}; do
-  curl http://localhost:8080/api/v1/guarantees | grep "id" | head -1
-done
-# Each request may hit a different backend instance
-```
-
-**Explain**:
-- Nginx balances incoming requests across 3 backends
-- Load distribution: round-robin or least connections
-- No single point of failure (one instance down, others serve requests)
-
-### Step 3: Data Isolation (Per-Tenant) (5 min)
-
-**Concept**: In a true multi-tenant SaaS, each bank has separate data.
-
-**Current limitation**: Each instance has separate H2 database (no shared state)
-
-**Future improvement**: Shared PostgreSQL with `tenant_id` column:
-```sql
-ALTER TABLE GUARANTEE ADD COLUMN tenant_id VARCHAR(50);
-CREATE INDEX idx_guarantee_tenant ON GUARANTEE(tenant_id);
-
--- Query for specific bank
-SELECT * FROM GUARANTEE WHERE tenant_id = 'bbva-es';
-```
-
-**In Frontend**:
-1. Create guarantee on instance 1 (Instance 1 database)
-2. Create guarantee on instance 2 (Instance 2 database)
-3. Each database has its own 7 guarantees (separate isolation)
-
-**Explain**:
-- Real SaaS would use shared DB with row-level security (RLS)
-- Tenant ID in every query ensures data isolation
-- Audit logs tied to tenant_id for compliance
-
-### Step 4: Stress Test & Scalability (8 min)
-
-**Generate load** (multiple concurrent requests):
-```bash
-# Using Apache Bench
-ab -n 1000 -c 100 http://localhost:8080/api/v1/guarantees
-
-# Or using GNU Parallel
-seq 1 100 | parallel -j 10 'curl http://localhost:8080/api/v1/guarantees'
-```
-
-**Monitor response times**:
-- With 1 instance: latency increases as load increases
-- With 3 instances: latency stays stable (load distributed)
-
-**In Prometheus/Grafana** (future):
-- Track request latency per instance
-- Show CPU/memory usage per container
-
-### Step 5: Zero-Downtime Deployment (8 min)
-
-**Blue-Green Strategy**:
-1. Keep 3 instances running (blue)
-2. Start 2 new instances with updated code (green)
-3. Switch load balancer to green
-4. Terminate blue instances
-
-**Simulate**:
-```bash
-# Terminal 1: Current deployment (blue)
-docker-compose up -d
-
-# Terminal 2: New deployment (green, different port)
-docker-compose -f docker-compose-v2.yml up -d
-
-# Update nginx load balancer to route to green instances
-# curl http://localhost:8080 now hits green instances
-
-# Terminate blue instances
-docker-compose down
-```
-
-**Result**: No requests dropped, seamless transition
-
-**In Frontend**:
-- During deployment, requests still succeed (routed to healthy instances)
-- Users see no downtime
-
-### Step 6: Container Resource Constraints (4 min)
-
-**Set resource limits** in docker-compose.yml:
-```yaml
-backend-1:
-  build: ./guarantees-service
-  deploy:
-    resources:
-      limits:
-        cpus: '0.5'
-        memory: 512M
-      reservations:
-        cpus: '0.25'
-        memory: 256M
-```
-
-**Monitor resource usage**:
-```bash
-docker stats --no-stream  # CPU, memory, network I/O
-```
-
-**Explain**:
-- Guarantees each instance doesn't consume excessive resources
-- Auto-scaling: If CPU > 80%, start new instance
-- Cost control: Tight resource limits reduce infrastructure cost
-
-### Step 7: Health Checks & Auto-Recovery (5 min)
-
-**Kubernetes-style health check**:
-```yaml
-backend-1:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
-    start_period: 30s
-```
-
-**Simulate failure**:
-1. Stop one backend instance
-2. Load balancer removes it from pool
-3. Nginx continues routing to healthy instances
-4. Restart instance → automatically re-added to pool
-
-```bash
-docker-compose kill backend-1
-# curl now only hits backend-2 and backend-3
-
-docker-compose start backend-1
-# curl now includes backend-1 again
-```
+**Success Criteria**:
+- ✅ All 3 instances appear in Prometheus targets
+- ✅ Grafana dashboard shows per-instance metrics
+- ✅ Load distribution is balanced (±20% variance acceptable)
 
 ---
 
-## Discussion Points
+### nova-async-comm (Messaging & Events)
 
-### For Enterprise Architects
-1. **Multi-tenancy**: "How do we prevent one bank from seeing another's data?"
-   - Answer: Row-level security (tenant_id filter on all queries)
-2. **Compliance**: "Can each tenant have their own compliance domain?"
-   - Answer: Yes, with separate clusters or database schemas per tenant
-3. **Cost**: "How much does running 3 instances cost vs. 1?"
-   - Answer: 3x infrastructure, but handles 10x load → better cost-per-transaction
+**Objective**: Coordinate events across multi-instance deployment
 
-### For DevOps / SREs
-1. **Deployment**: "How do we roll out updates without downtime?"
-   - Answer: Blue-green or canary deployments with load balancer switching
-2. **Monitoring**: "What metrics matter for scaling decisions?"
-   - Answer: CPU, memory, request latency, error rate per instance
-3. **Auto-scaling**: "How do we automatically scale based on load?"
-   - Answer: Kubernetes HPA (Horizontal Pod Autoscaler) watches metrics
+**Must deliver**:
 
----
+1. **RabbitMQ Cluster** (or single broker for now)
+   - [ ] All 3 backend instances connect to same RabbitMQ
+   - [ ] Publish guarantee events from any instance
+   - [ ] All consumers subscribe to same queue
 
-## Technical Details
+2. **Tenant-Specific Topics**
+   - [ ] Event routing: `guarantees.bank-a.events`, `guarantees.bank-b.events`
+   - [ ] Each tenant's instance publishes to its own topic
+   - [ ] Consumers subscribe to tenant-specific topic
 
-### Horizontal Scaling Architecture
-
-```
-┌─────────────────────────────────────────┐
-│         Nginx Load Balancer             │
-│   (round-robin / least connections)     │
-└──────┬──────────────────┬───────────────┘
-       │                  │
-       ▼                  ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Backend 1   │  │  Backend 2   │  │  Backend 3   │
-│  :8080       │  │  :8081       │  │  :8082       │
-│  H2 DB       │  │  H2 DB       │  │  H2 DB       │
-└──────────────┘  └──────────────┘  └──────────────┘
-```
-
-**With Shared DB** (Production):
-```
-┌─────────────────────────────────────────┐
-│         Nginx Load Balancer             │
-└──────┬──────────────────┬───────────────┘
-       │                  │
-       ▼                  ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Backend 1   │  │  Backend 2   │  │  Backend 3   │
-│  :8080       │  │  :8081       │  │  :8082       │
-└──────────────┘  └──────────────┘  └──────────────┘
-       │                  │                  │
-       └──────────────────┴──────────────────┘
-                    ▼
-           ┌──────────────────────┐
-           │   PostgreSQL DB      │
-           │  (shared, tenant_id) │
-           └──────────────────────┘
-```
-
-### Tenant Isolation Query
-
-```java
-// In GuaranteeRepository
-List<Guarantee> findByTenantIdAndStatus(String tenantId, GuaranteeStatus status);
-
-// In GuaranteeService (ALL queries include tenant_id)
-public List<GuaranteeDTO> list(String tenantId, GuaranteeStatus status) {
-    return repository.findByTenantIdAndStatus(tenantId, status).stream()
-        .map(mapper::toDTO)
-        .collect(toList());
-}
-```
-
-### Docker Resource Constraints
-
-```yaml
-deploy:
-  resources:
-    limits:
-      cpus: '0.5'      # Max 50% of 1 CPU
-      memory: 512M     # Max 512 MB RAM
-    reservations:
-      cpus: '0.25'     # Guaranteed 25% of 1 CPU
-      memory: 256M     # Guaranteed 256 MB RAM
-```
+**Success Criteria**:
+- ✅ Events published from instance-1 visible in RabbitMQ Management UI
+- ✅ Events from instance-2 also appear in queue
+- ✅ Tenant routing works (events segregated by tenant)
 
 ---
 
-## Proposed Improvements (for Delegation)
+## Verification Checklist
 
-### nova-service-gen (Backend)
-- [ ] **Tenant context filter** — Extract tenant_id from JWT/header, auto-filter all queries
-- [ ] **Audit logging per tenant** — Log who accessed what guarantee, when
-- [ ] **Tenant-specific workflows** — Different approval chains per bank
+- [ ] `docker compose up` — 3 backends + nginx start successfully
+- [ ] `curl http://localhost:8080/api/v1/guarantees` — requests load-balanced (check nginx logs)
+- [ ] Create guarantee on instance-1, query from instance-2 — data consistent
+- [ ] Kill instance-1, requests still succeed (routed to 2, 3)
+- [ ] Prometheus shows metrics from all 3 instances
+- [ ] Grafana shows load distribution ≈33% each
+- [ ] Events published from each instance reach queue
 
-### nova-release-mgr (Docker & CI/CD)
-- [ ] **Helm charts** for Kubernetes (replicas, scaling policies)
-- [ ] **Blue-green deployment automation** (GitHub Actions / Jenkins)
-- [ ] **SonarQube** for multi-instance quality gates
-
-### nova-ops-monitor (Infrastructure)
-- [ ] **Prometheus** for instance-level metrics (requests/sec, latency)
-- [ ] **Grafana dashboard** for multi-instance health
-- [ ] **Jaeger** for distributed tracing across instances
-
-### nova-async-comm (Messaging)
-- [ ] **RabbitMQ cluster** for multi-instance event coordination
-- [ ] **Tenant-specific event topics** (separate queue per bank)
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Load balancer returns 502 | Check if all backends are healthy: `docker ps` |
-| Instances have different data | Expected (separate H2 DB); use shared DB for true multi-tenancy |
-| High latency with 3 instances | Check CPU/memory constraints; increase resources |
-
----
-
-**Previous Demo**: [Demo 3: Dashboard & Filtering](./demo-03-dashboard-filtering.md)  
-**Next Demo**: [Demo 5: Async Notification System](./demo-05-async-notifications.md)
+**Definition of Done for Demo 4**: 
+All agents complete, 3-instance cluster stable, load balanced, data consistent.
