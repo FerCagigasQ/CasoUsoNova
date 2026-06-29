@@ -1,204 +1,79 @@
-# NOVA Guarantees Demo Prompts
+# Prompts de desarrollo NOVA
 
-This folder contains **full-stack demo scenarios** for the NOVA Bank Guarantees platform, designed for **30-40 minute presentations**. Each prompt covers a specific workflow and leverages the complete NOVA agent ecosystem.
+Esta carpeta contiene **PRDs de desarrollo de código** pensados para **ver a los agentes de la
+organización NOVA trabajar** sobre la plataforma. Cada prompt describe una **feature pequeña e
+independiente** con un **efecto visible en la UI** (estado inicial → final), ideal para mostrar al inicio
+y al final de una demo.
 
-## Purpose
+> Demos no oficiales de desarrollo. Cada PRD es una mejora de plataforma autocontenida; **no** introduce
+> nuevo dominio de negocio de trade finance, sino capacidades transversales de la UI y la API.
 
-These prompts guide architects, engineers, and stakeholders through realistic use cases of the NOVA platform. They are:
-- **Self-contained**: Each can run independently in 30-40 minutes
-- **Full-stack**: Demonstrate backend REST APIs, frontend UI, state transitions, and data persistence
-- **Agent-driven**: Delegate specialized tasks to NOVA agents (service-gen, frontend-gen, api-integr, async-comm, release-mgr, ops-monitor)
-- **Demo-first**: Show business value first, then technical implementation details
+## Propósito
 
-## Demo Scenarios
+- **Autocontenidos**: cada PRD se implementa por separado, de principio a fin.
+- **Con efecto en la UI**: todos producen un cambio observable en pantalla (antes → después).
+- **Full-stack cuando aplica**: frontend Angular 17 + Material y, si la feature lo requiere, backend
+  Spring Boot 3.2 / Java 17.
+- **Dirigidos por agentes**: el `nova-architect` descompone cada PRD en **≤5 sub-tareas** (modo demo,
+  sin cascadas) y los agentes escriben el código.
 
-### 1. [Demo 1: Guarantee Lifecycle (Create → Issue → Amend)](./demo-01-guarantee-lifecycle.md)
-**Duration**: 35 minutes | **Complexity**: Beginner  
-**Scenario**: Walk through creating a bank guarantee, issuing it, and amending its terms.  
-**Agents**: nova-service-gen, nova-frontend-gen, nova-api-integr
+## Demos
 
-### 2. [Demo 2: Claims Processing Workflow](./demo-02-claims-workflow.md)
-**Duration**: 40 minutes | **Complexity**: Intermediate  
-**Scenario**: Submit a claim on an active guarantee, track its status, and view the audit trail.  
-**Agents**: nova-service-gen, nova-frontend-gen, nova-async-comm
+| # | PRD | Complejidad | Efecto en UI (inicial → final) | Agentes principales |
+|---|-----|-------------|--------------------------------|---------------------|
+| 1 | [Tema oscuro / claro](./demo-01-tema-oscuro.md) | Principiante | Sin control de tema → conmutador que cambia toda la UI y persiste | frontend-gen |
+| 2 | [Exportación a CSV / Excel](./demo-02-exportacion-datos.md) | Principiante-Intermedio | Sin exportación → botón que descarga las filas visibles | frontend-gen, service-gen |
+| 3 | [Búsqueda global + paleta de comandos](./demo-03-busqueda-global.md) | Intermedio | Sin buscador → overlay `Ctrl/Cmd+K` que busca y navega | frontend-gen, service-gen |
+| 4 | [Dashboard de KPIs con gráficas](./demo-04-dashboard-kpis.md) | Intermedio-Avanzado | Solo tabla → vista `/dashboard` con tarjetas y charts | service-gen, frontend-gen |
+| 5 | [Internacionalización ES/EN](./demo-05-internacionalizacion.md) | Intermedio | UI en un idioma → selector que traduce al vuelo y persiste | frontend-gen |
 
-### 3. [Demo 3: Real-time Dashboard & Filtering](./demo-03-dashboard-filtering.md)
-**Duration**: 30 minutes | **Complexity**: Beginner  
-**Scenario**: Filter guarantees by status/type, track expiry dates, and visualize portfolio metrics.  
-**Agents**: nova-frontend-gen, nova-api-integr, nova-ops-monitor
+## Organización de agentes NOVA
 
-### 4. [Demo 4: Multi-tenancy & Scaling](./demo-04-multitenancy-scaling.md)
-**Duration**: 40 minutes | **Complexity**: Advanced  
-**Scenario**: Deploy multiple bank instances, manage separate guarantee portfolios, and scale under load.  
-**Agents**: nova-service-gen, nova-release-mgr, nova-ops-monitor, nova-async-comm
+> Definidos en `QPaperClip/containers/nova-org/company/` (`COMPANY.md`, `.paperclip.yaml`, `agents/*/AGENTS.md`).
 
-### 5. [Demo 5: Async Notification System](./demo-05-async-notifications.md)
-**Duration**: 35 minutes | **Complexity**: Intermediate  
-**Scenario**: Set up event-driven notifications for guarantee expiry, amendments, and claims.  
-**Agents**: nova-async-comm, nova-service-gen, nova-frontend-gen
+| Agente | Rol | Adapter |
+|--------|-----|---------|
+| **nova-architect** | CTO — descomposición técnica, contratos de API, code review, aprobación | Claude Code |
+| **nova-repo-provisioner** | Bootstrap de repo y toolchain | Claude Code |
+| **nova-service-gen** | Backend (Spring Boot / Java) | Codex |
+| **nova-frontend-gen** | Frontend (Angular 17 + Material) | Antigravity |
+| **nova-api-integr** | Integración, OpenAPI/Swagger, CORS, contrato de error | Antigravity |
+| **nova-release-mgr** | Docker, release y gate de validación | Codex |
+| **nova-async-comm** | Eventos / notificaciones reactivas | standby* |
+| **nova-ops-monitor** | Observabilidad / healthchecks | standby* |
 
----
+\* En estos PRDs `nova-async-comm` y `nova-ops-monitor` quedan en **standby**: aparecen en el org chart
+pero solo intervienen si una feature concreta lo requiere.
 
-## How to Use These Prompts
+Cada PRD incluye una sección **Equipo y reparto de trabajo** con la responsabilidad concreta de cada
+agente y el **flujo de ejecución**.
 
-### For Architects
-1. Pick a scenario matching your audience (beginner/intermediate/advanced)
-2. Read the **Overview** section
-3. Follow **Step-by-Step Guide** to show the workflow
-4. Use **Discussion Points** to engage stakeholders
-5. Refer to **Technical Details** if deep-dive questions arise
+## Nivel de implementación
 
-### For Demos
-1. Clone the repo and run `docker compose up --build` (5 min)
-2. Open the guide in your editor
-3. Follow the UI steps on http://localhost:4200
-4. Watch API calls in Swagger UI (http://localhost:8080/swagger-ui.html)
-5. Use H2 Console for real-time data inspection (http://localhost:8080/h2-console)
+Cada PRD debe abordarse como un desarrollo **completo y proporcional** a su complejidad, no como una
+maqueta. Reutilizar los patrones del repositorio, mantener contratos y compatibilidad, contemplar
+validación, errores, estados de carga y vacío, accesibilidad y responsive, y añadir pruebas
+proporcionales al riesgo. Toda entrega termina **validando los cambios, creando commit y haciendo
+`push`** de la rama; se trabaja en **rama separada** y se entrega vía **PR** (sin merge directo a `main`).
 
-### For Agent Delegation
-1. Each demo lists **Responsible Agents**
-2. Review the **Proposed Improvements** section
-3. Create sub-issues (max 5 per demo) with clear acceptance criteria
-4. Link this README in the epic description for context
+## Cómo ejecutar una demo
 
----
-
-## Improvement Proposals by Agent
-
-### nova-service-gen (Backend Services)
-- [ ] **Async guarantee status updates** via RabbitMQ (KAFKA alternative)
-- [ ] **Event sourcing** for guarantee amendments
-- [ ] **Bulk guarantee import** API endpoint (CSV upload)
-- [ ] **Guarantee expiry notifications** (scheduled job)
-- [ ] **API versioning** (v2 with backward compatibility)
-
-### nova-frontend-gen (Angular UI)
-- [ ] **Real-time status updates** using WebSocket / Server-Sent Events (SSE)
-- [ ] **Chart library integration** (NgCharts) for portfolio metrics
-- [ ] **Advanced filtering panel** with date range & amount filters
-- [ ] **Mobile-responsive design** (Material breakpoints)
-- [ ] **Dark mode support** (Angular Material theme switching)
-
-### nova-api-integr (Service Integration)
-- [ ] **OpenAPI 3.0 spec** validation & client code generation
-- [ ] **Feign client** for multi-service calls
-- [ ] **Circuit breaker** (Hystrix/Resilience4j) for downstream services
-- [ ] **API gateway** pattern (Spring Cloud Gateway)
-- [ ] **Request/Response logging** middleware
-
-### nova-async-comm (Messaging & Events)
-- [ ] **RabbitMQ broker** for guarantee events
-- [ ] **Dead-letter queue** handling for failed notifications
-- [ ] **Event schema** (AsyncAPI) for guarantee topics
-- [ ] **Email notifications** (Spring Mail) on claim submission
-- [ ] **Webhook integrations** for external systems
-
-### nova-release-mgr (Docker & CI/CD)
-- [ ] **Helm charts** for Kubernetes deployment
-- [ ] **Multi-stage CI/CD pipeline** (GitHub Actions / Jenkins)
-- [ ] **Blue-green deployment** strategy
-- [ ] **SonarQube integration** for code quality gates
-- [ ] **Container scanning** (Trivy) for vulnerabilities
-
-### nova-ops-monitor (Infrastructure & Observability)
-- [ ] **Prometheus metrics** for guarantee processing latency
-- [ ] **Grafana dashboard** for SLA monitoring
-- [ ] **Distributed tracing** (Spring Cloud Sleuth + Jaeger)
-- [ ] **Log aggregation** (ELK stack or similar)
-- [ ] **Kubernetes resource management** (CPU/memory limits)
-
----
-
-## Demo Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│         NOVA Guarantees Platform            │
-├─────────────────────────────────────────────┤
-│                                             │
-│  ┌──────────────────────────────────────┐  │
-│  │    Angular 17 UI (Material Design)   │  │
-│  │  - Guarantee CRUD                    │  │
-│  │  - Amendment/Claim Forms             │  │
-│  │  - Real-time Dashboard (TODO)        │  │
-│  └──────────────────────────────────────┘  │
-│                    ↓↑                       │
-│            REST API Gateway                │
-│                    ↓↑                       │
-│  ┌──────────────────────────────────────┐  │
-│  │    Spring Boot 3.2.x Backend         │  │
-│  │  - Guarantee CRUD Service            │  │
-│  │  - State Machine (DRAFT→ISSUED...)   │  │
-│  │  - Amendment & Claim Processing      │  │
-│  │  - Swagger UI & Actuator             │  │
-│  └──────────────────────────────────────┘  │
-│                    ↓↑                       │
-│     H2 Database (or PostgreSQL TODO)       │
-│                                             │
-│  ┌──────────────────────────────────────┐  │
-│  │   RabbitMQ Broker (TODO)             │  │
-│  │  - Guarantee Events                  │  │
-│  │  - Notification Queue                │  │
-│  └──────────────────────────────────────┘  │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
----
-
-## Quick Reference: API Endpoints
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/v1/guarantees` | List all guarantees (with filters) |
-| POST | `/api/v1/guarantees` | Create new guarantee |
-| GET | `/api/v1/guarantees/{id}` | Get guarantee detail |
-| PUT | `/api/v1/guarantees/{id}` | Update guarantee |
-| POST | `/api/v1/guarantees/{id}/issue` | Issue guarantee (DRAFT → ISSUED) |
-| POST | `/api/v1/guarantees/{id}/amendments` | Add amendment |
-| POST | `/api/v1/guarantees/{id}/claims` | Submit claim |
-| GET | `/api/v1/guarantees/{id}/claims` | List claims for guarantee |
-| GET | `/api/v1/applicants` | Reference data |
-| GET | `/api/v1/beneficiaries` | Reference data |
-| GET | `/api/v1/issuing-banks` | Reference data |
-
----
-
-## Running a Demo
-
-### Prerequisites
-- Docker & Docker Compose (or Java 17 + Node.js 18+)
-- 10-15 min to build + start services
-
-### Quick Start
 ```bash
-# Clone repo (if needed)
 git clone https://github.com/FerCagigasQ/CasoUsoNova.git
 cd CasoUsoNova
-
-# Start all services (backend + frontend)
-docker compose up --build
-
-# Or use local script (no Docker required)
-./run-local.sh          # Linux/Mac
-.\run-local.ps1         # Windows
+docker compose up --build      # backend + frontend
+# o, sin Docker:
+./run-local.sh                 # Linux/Mac
+.\run-local.ps1                # Windows
 ```
 
-### Access Points
-- **Frontend**: http://localhost:4200 (dev) or http://localhost (Docker)
-- **Backend API**: http://localhost:8080/api/v1/guarantees
+### Puntos de acceso
+
+- **Frontend**: http://localhost (Docker) o http://localhost:4200 (dev)
+- **Backend API**: http://localhost:8080/api/v1
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **H2 Console**: http://localhost:8080/h2-console (user: `sa`, password: empty)
+- **Consola H2**: http://localhost:8080/h2-console (usuario `sa`, sin contraseña)
 
 ---
 
-## Feedback & Improvements
-
-These prompts are living documents. After each demo:
-1. Collect feedback on clarity, pace, and technical accuracy
-2. Propose improvements using the **Improvement Proposals** checklist
-3. Create GitHub issues with demo-related PRs
-4. Update this README with lessons learned
-
-**Estimated demo content refresh**: Quarterly  
-**Last updated**: 2026-06-29
+**Última actualización**: 2026-06-29
