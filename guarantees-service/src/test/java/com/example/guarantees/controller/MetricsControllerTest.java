@@ -24,7 +24,12 @@ class MetricsControllerTest {
             .andExpect(jsonPath("$.total").isNumber())
             .andExpect(jsonPath("$.byStatus").isMap())
             .andExpect(jsonPath("$.byType").isMap())
-            .andExpect(jsonPath("$.byMonth").isArray());
+            .andExpect(jsonPath("$.byCurrency").isMap())
+            .andExpect(jsonPath("$.byMonth").isArray())
+            .andExpect(jsonPath("$.totalAmount").isNumber())
+            .andExpect(jsonPath("$.averageAmount").isNumber())
+            .andExpect(jsonPath("$.activeCount").isNumber())
+            .andExpect(jsonPath("$.expiringIn30Days").isNumber());
     }
 
     @Test
@@ -40,5 +45,32 @@ class MetricsControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.byMonth[0].month").value("2024-01"))
             .andExpect(jsonPath("$.byMonth[0].count").value(1));
+    }
+
+    @Test
+    void getMetrics_filtersByStatusTypeAndCurrency() throws Exception {
+        mockMvc.perform(get("/api/v1/metrics")
+                .param("status", "ISSUED")
+                .param("type", "PERFORMANCE")
+                .param("currency", "usd")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(0))
+            .andExpect(jsonPath("$.byStatus").isEmpty())
+            .andExpect(jsonPath("$.byType").isEmpty())
+            .andExpect(jsonPath("$.byCurrency").isEmpty())
+            .andExpect(jsonPath("$.totalAmount").value(0.00));
+    }
+
+    @Test
+    void getMetrics_filtersByIssueDateRange() throws Exception {
+        mockMvc.perform(get("/api/v1/metrics")
+                .param("issueDateFrom", "2024-01-01")
+                .param("issueDateTo", "2024-03-31")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.byMonth[0].month").value("2024-01"))
+            .andExpect(jsonPath("$.byMonth[2].month").value("2024-03"));
     }
 }

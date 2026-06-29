@@ -200,6 +200,17 @@ guarantees-ui/
 - `GET /beneficiaries` — List beneficiaries
 - `GET /issuing-banks` — List issuing banks
 
+### Dashboard Metrics
+- `GET /metrics` — KPI summary for guarantees.
+- Optional filters: `status`, `type`, `currency`, `issueDateFrom`, `issueDateTo`, `expiryDateFrom`, `expiryDateTo`.
+- Date filters use ISO format: `yyyy-MM-dd`.
+- Example: `GET /api/v1/metrics?status=ISSUED&currency=EUR&issueDateFrom=2024-01-01`.
+
+Response fields:
+- `total`, `byStatus`, `byType`, `byMonth` — existing dashboard aggregates.
+- `byCurrency`, `totalAmount`, `averageAmount`, `activeCount`, `expiringIn30Days` — extended aggregates.
+- Results are cached per filter combination and invalidated when guarantees are created, updated, issued, amended, claimed, or deleted.
+
 ### Health & Documentation
 - `GET /actuator/health` — Service health
 - `GET /swagger-ui.html` — Interactive API docs

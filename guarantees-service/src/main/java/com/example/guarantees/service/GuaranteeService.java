@@ -22,6 +22,7 @@ import com.example.guarantees.repository.BeneficiaryRepository;
 import com.example.guarantees.repository.ClaimRepository;
 import com.example.guarantees.repository.GuaranteeRepository;
 import com.example.guarantees.repository.IssuingBankRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,7 @@ public class GuaranteeService {
                 .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + id));
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public GuaranteeDTO create(CreateGuaranteeRequest request) {
         Applicant applicant = applicantRepository.findById(request.getApplicantId())
                 .orElseThrow(() -> new IllegalArgumentException("Applicant not found"));
@@ -97,6 +99,7 @@ public class GuaranteeService {
         return toDTO(saved);
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public GuaranteeDTO update(Long id, CreateGuaranteeRequest request) {
         Guarantee guarantee = guaranteeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + id));
@@ -123,6 +126,7 @@ public class GuaranteeService {
         return toDTO(updated);
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public void delete(Long id) {
         if (!guaranteeRepository.existsById(id)) {
             throw new IllegalArgumentException("Guarantee not found with id: " + id);
@@ -130,6 +134,7 @@ public class GuaranteeService {
         guaranteeRepository.deleteById(id);
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public GuaranteeDTO issue(Long id) {
         Guarantee guarantee = guaranteeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + id));
@@ -143,6 +148,7 @@ public class GuaranteeService {
         return toDTO(updated);
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public GuaranteeDTO addAmendment(Long guaranteeId, BigDecimal newAmount, LocalDate newExpiryDate, String description) {
         Guarantee guarantee = guaranteeRepository.findById(guaranteeId)
                 .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + guaranteeId));
@@ -168,6 +174,7 @@ public class GuaranteeService {
         return toDTO(updated);
     }
 
+    @CacheEvict(value = "metrics", allEntries = true)
     public GuaranteeDTO addClaim(Long guaranteeId, BigDecimal claimedAmount, String reason) {
         Guarantee guarantee = guaranteeRepository.findById(guaranteeId)
                 .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + guaranteeId));
