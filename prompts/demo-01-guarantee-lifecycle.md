@@ -201,6 +201,22 @@ public class GuaranteeService {
         return amendment;
     }
 
+    public Guarantee update(Long id, Guarantee changes) {
+        Guarantee g = getOrThrow(id);
+        if (g.getStatus() != GuaranteeStatus.DRAFT)
+            throw new InvalidStateTransitionException("Solo un aval en DRAFT puede editarse");
+        g.setType(changes.getType());
+        g.setAmount(changes.getAmount());
+        g.setCurrency(changes.getCurrency());
+        g.setIssueDate(changes.getIssueDate());
+        g.setExpiryDate(changes.getExpiryDate());
+        g.setApplicant(changes.getApplicant());
+        g.setBeneficiary(changes.getBeneficiary());
+        g.setIssuingBank(changes.getIssuingBank());
+        validateBusinessRules(g);
+        return g;
+    }
+
     public void delete(Long id) {
         Guarantee g = getOrThrow(id);
         if (g.getStatus() != GuaranteeStatus.DRAFT)
@@ -208,9 +224,30 @@ public class GuaranteeService {
         repository.delete(g);
     }
 
+    public Claim addClaim(Long id, Claim claim) {
+        Guarantee g = getOrThrow(id);
+        if (g.getStatus() != GuaranteeStatus.ISSUED && g.getStatus() != GuaranteeStatus.AMENDED)
+            throw new InvalidStateTransitionException("Solo ISSUED/AMENDED admite reclamaciones");
+        claim.setGuarantee(g);
+        g.getClaims().add(claim);
+        g.setStatus(GuaranteeStatus.CLAIMED);
+        return claim;
+    }
+
+    public List<Claim> listClaims(Long id) {
+        return getOrThrow(id).getClaims();
+    }
+
+    // Acceso de lectura para el controlador (delega en el helper interno)
+    public Guarantee findById(Long id) {
+        return getOrThrow(id);
+    }
+
     private void validateBusinessRules(Guarantee g) {
         if (g.getAmount() == null || g.getAmount().signum() <= 0)
             throw new IllegalArgumentException("amount debe ser > 0");
+        if (g.getIssueDate() == null || g.getExpiryDate() == null)
+            throw new IllegalArgumentException("issueDate y expiryDate son obligatorios");
         if (!g.getExpiryDate().isAfter(g.getIssueDate()))
             throw new IllegalArgumentException("expiryDate debe ser posterior a issueDate");
         if (g.getApplicant() == null || g.getBeneficiary() == null || g.getIssuingBank() == null)
@@ -247,7 +284,7 @@ public class GuaranteeController {
     }
 
     @GetMapping("/{id}")
-    public GuaranteeDTO get(@PathVariable Long id) { return mapper.toDto(service.getOrThrow(id)); }
+    public GuaranteeDTO get(@PathVariable Long id) { return mapper.toDto(service.findById(id)); }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -257,7 +294,7 @@ public class GuaranteeController {
 
     @PutMapping("/{id}")
     public GuaranteeDTO update(@PathVariable Long id, @Valid @RequestBody GuaranteeRequest body) {
-        return mapper.toDto(service.update(id, body));
+        return mapper.toDto(service.update(id, mapper.toEntity(body)));
     }
 
     @DeleteMapping("/{id}")
@@ -271,6 +308,17 @@ public class GuaranteeController {
     @ResponseStatus(HttpStatus.CREATED)
     public AmendmentDTO amend(@PathVariable Long id, @Valid @RequestBody AmendmentRequest body) {
         return mapper.toDto(service.addAmendment(id, mapper.toEntity(body)));
+    }
+
+    @PostMapping("/{id}/claims")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ClaimDTO addClaim(@PathVariable Long id, @Valid @RequestBody ClaimRequest body) {
+        return mapper.toDto(service.addClaim(id, mapper.toEntity(body)));
+    }
+
+    @GetMapping("/{id}/claims")
+    public List<ClaimDTO> listClaims(@PathVariable Long id) {
+        return service.listClaims(id).stream().map(mapper::toDto).toList();
     }
 }
 ```
@@ -292,9 +340,16 @@ DTOs `GuaranteeDTO`, `ApplicantDTO`, `BeneficiaryDTO`, `IssuingBankDTO`, `Amendm
   "status": "ISSUED",             // enum como string, no número
   "applicant":   { "firstName": "...", "lastName": "...", "email": "..." },
   "beneficiary": { "firstName": "...", "lastName": "...", "email": "..." },
-  "issuingBank": { "name": "...", "bic": "...", "country": "..." }
+  "issuingBank": { "name": "...", "bic": "...", "country": "..." },
+  "amendments": [ { "description": "...", "newAmount": 60000.00, "newExpiryDate": "2027-06-30" } ],
+  "claims":     [ { "reason": "...", "amount": 10000.00, "status": "OPEN" } ]
 }
 ```
+
+> El frontal (`guarantees-ui`) espera `amendments` y `claims` como arrays en el `Guarantee`; el
+> `GuaranteeDTO` debe incluirlos para no romper el contrato existente. `ApplicantDTO`/`BeneficiaryDTO`
+> pueden ampliarse con los campos ya presentes en el repo (`taxId`, `phone`, `address`, `country`)
+> manteniendo los nombres mostrados arriba.
 
 ### 4.7 Seed de datos
 
