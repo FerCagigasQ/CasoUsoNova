@@ -1,6 +1,6 @@
 version: '3.9'
 
-# PRODUCCIÓN: usa docker-compose.local.yml para desarrollo local
+# Desarrollo local con H2 en memoria
 # Uso: docker-compose -f docker-compose.local.yml up
 
 services:
@@ -8,11 +8,12 @@ services:
     build:
       context: ./guarantees-service
       dockerfile: Dockerfile
-    container_name: guarantees-backend
+    container_name: guarantees-backend-local
     ports:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_OPTS: "-Xmx512m -Xms256m"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
@@ -25,7 +26,7 @@ services:
     build:
       context: ./guarantees-ui
       dockerfile: Dockerfile
-    container_name: guarantees-frontend
+    container_name: guarantees-frontend-local
     ports:
       - "80:80"
     depends_on:

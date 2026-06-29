@@ -10,23 +10,34 @@ Built with **Spring Boot 3.2.x + Angular 17 + Docker**, deployable with a single
 
 ### Docker (Recommended - 1 Command)
 
+Uses **H2 in-memory database** (no external DB needed).
+
 ```bash
+# Production-like (with frontend)
 docker compose up --build
+
+# Dev-only backend (faster iteration)
+docker compose -f docker-compose.local.yml up --build
 ```
 
 Then access:
 - **Frontend**: http://localhost (port 80)
 - **Backend API**: http://localhost:8080/api/v1/guarantees
 - **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **H2 Console**: http://localhost:8080/h2-console
+- **H2 Console**: http://localhost:8080/h2-console (user: sa, password: empty)
+  - **JDBC URL**: `jdbc:h2:mem:testdb` (in-memory, data lost on restart)
 
 ### Local Development (No Docker)
 
 **Terminal 1 — Backend**
 ```bash
 cd guarantees-service
-./mvnw spring-boot:run  # Linux/Mac
-mvnw.bat spring-boot:run  # Windows
+
+# Linux/Mac
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
+
+# Windows
+mvnw.bat spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"
 ```
 
 **Terminal 2 — Frontend**
@@ -37,6 +48,33 @@ npm start
 ```
 
 Frontend runs on http://localhost:4200 with proxy to backend.
+
+---
+
+## H2 Database Configuration
+
+**Current Setup**: In-memory H2 database (perfect for demo/development)
+
+| Aspect | Value |
+|--------|-------|
+| **Type** | In-memory (jdbc:h2:mem:testdb) |
+| **Data Persistence** | ❌ Lost on restart |
+| **Console** | ✅ Web UI at /h2-console |
+| **Multi-access** | Same JVM only |
+| **Ideal for** | Demo, dev, tests |
+
+For detailed documentation on H2 configuration, schema, and troubleshooting, see:
+- **[H2 Database Guide](docs/H2_DATABASE_GUIDE.md)** — How H2 works, configuration, profiles, troubleshooting
+- **[Code Structure](docs/CODE_STRUCTURE.md)** — Entity mapping, data flow, lifecycle
+
+### Troubleshooting H2 Errors
+
+**Error**: `Database "/root/test" not found...`
+- **Cause**: Incorrect JDBC URL or missing profile configuration
+- **Fix**: Ensure `application-docker.yml` exists with `jdbc:h2:mem:testdb`
+- **Verify**: `docker logs guarantees-backend-local | grep "jdbc:h2"`
+
+See **[H2 Database Guide § Troubleshooting](docs/H2_DATABASE_GUIDE.md#5-troubleshooting)** for more issues.
 
 ---
 
