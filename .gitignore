@@ -1,0 +1,27 @@
+# NOVA toolchain (descargado bajo demanda, no versionado)
+.nova-toolchain/
+toolchain/nova-le/tools/java/
+toolchain/nova-le/tools/maven/
+
+# Build artifacts
+target/
+*.jar
+*.war
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Node
+node_modules/
+dist/
+.angular/
+
+# OS
+.DS_Store
+Thumbs.db
