@@ -14,8 +14,10 @@ y al final de una demo.
 - **Con efecto en la UI**: todos producen un cambio observable en pantalla (antes → después).
 - **Full-stack cuando aplica**: frontend Angular 17 + Material y, si la feature lo requiere, backend
   Spring Boot 3.2 / Java 17.
-- **Dirigidos por agentes**: el `nova-architect` descompone cada PRD en **≤5 sub-tareas** (modo demo,
-  sin cascadas) y los agentes escriben el código.
+- **Dirigidos por el arquitecto**: el operador entrega **solo el objetivo** a `nova-architect`
+  (incidencia raíz); **no se asignan sub-tareas a mano**. El `nova-architect` **recibe el prompt,
+  lo descompone en ≤5 sub-tareas y las delega** a los demás agentes (modo demo, sin cascadas), que
+  escriben el código; luego revisa y aprueba.
 
 ## Demos
 
@@ -45,8 +47,8 @@ y al final de una demo.
 \* En estos PRDs `nova-async-comm` y `nova-ops-monitor` quedan en **standby**: aparecen en el org chart
 pero solo intervienen si una feature concreta lo requiere.
 
-Cada PRD incluye una sección **Equipo y reparto de trabajo** con la responsabilidad concreta de cada
-agente y el **flujo de ejecución**.
+Cada PRD incluye una sección **Delegación que ejecuta `nova-architect`** con las sub-incidencias que
+el arquitecto crea y delega (una por agente, con sus dependencias) y el **flujo de ejecución**.
 
 ## Nivel de implementación
 

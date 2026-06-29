@@ -3,10 +3,17 @@
 **Sprint de desarrollo**: Exportación de datos desde la tabla
 **Duración estimada**: 2-3 horas
 **Complejidad**: Principiante-Intermedio
-**Agentes NOVA**: nova-architect, nova-frontend-gen, nova-service-gen, nova-api-integr, nova-release-mgr
+**Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
+**Agentes que ejecutan**: nova-frontend-gen, nova-service-gen, nova-api-integr, nova-release-mgr
 
 > Demo de desarrollo. Los agentes NOVA escriben código y el resultado es un **efecto visible en la UI**
 > (botón nuevo + descarga generada). No modifica la lógica de negocio existente.
+
+> **Cómo se entrega este prompt.** El operador crea **un único objetivo (Goal) y una incidencia raíz
+> asignada a `nova-architect`** con el contenido de este PRD. **No se asignan sub-tareas a mano.**
+> `nova-architect` **recibe el objetivo, lo descompone en ≤5 sub-tareas y las delega** creando una
+> sub-incidencia por agente con sus dependencias (blockers), revisa el código entregado y aprueba la
+> release. El apartado 6 describe **la delegación que ejecuta el arquitecto**, no un reparto previo del operador.
 
 ---
 
@@ -60,24 +67,25 @@ descarga en el navegador. Es ideal para mostrar a los agentes de frontend y back
 **Guion**: abrir la lista → aplicar un filtro → pulsar "Exportar" → "Excel" → se descarga el `.xlsx`
 con exactamente esas filas → abrirlo para mostrar el contenido.
 
-## 6. Equipo y reparto de trabajo
+## 6. Delegación que ejecuta `nova-architect`
 
-> Agentes de la organización **NOVA** (`QPaperClip/containers/nova-org`).
+> El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone y delega**
+> creando estas sub-incidencias (una por agente de la org **NOVA**, `QPaperClip/containers/nova-org`),
+> con dependencias entre ellas. No es un reparto hecho a mano por el operador.
 
-| Agente | Adapter | Responsabilidad en este PRD |
-|--------|---------|------------------------------|
-| **nova-architect** (CTO) | Claude Code | Descompone el PRD, decide el reparto CSV (cliente) vs Excel (servidor), define el contrato del endpoint y revisa. |
-| **nova-frontend-gen** | Antigravity | Botón/menú de exportación, generación de CSV en cliente, descarga del `.xlsx`, estados de carga/error. Tests front. |
-| **nova-service-gen** | Codex | Endpoint `GET /export`, generación del `.xlsx` con POI reutilizando filtros y DTOs. Tests de integración. |
-| **nova-api-integr** | Antigravity | Documenta el endpoint en OpenAPI y valida CORS para la descarga. |
-| **nova-release-mgr** | Codex | Verifica build + arranque Docker y ejecuta el gate `nova-post-gen-validation`. |
+| # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
+|---|----------------------------------------|-----------------|---------|------------|
+| 1 | Endpoint `GET /export`, generación del `.xlsx` con POI reutilizando filtros y DTOs. Tests de integración. | **nova-service-gen** | Codex | — |
+| 2 | Botón/menú de exportación, generación de CSV en cliente, descarga del `.xlsx`, estados de carga/error. Tests front. | **nova-frontend-gen** | Antigravity | — |
+| 3 | Documentar el endpoint en OpenAPI y validar CORS para la descarga. | **nova-api-integr** | Antigravity | #1 |
+| 4 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Codex | #1, #2 |
 
 `nova-async-comm` y `nova-ops-monitor` quedan en **standby**.
 
-### Flujo de ejecución
+### Flujo de ejecución (orquestado por el arquitecto)
 
-1. **nova-architect** descompone (≤5 sub-tareas) y fija el contrato del endpoint.
-2. **nova-service-gen** y **nova-frontend-gen** implementan en paralelo (backend Excel / frontend CSV+descarga).
-3. **nova-api-integr** documenta y verifica CORS.
-4. **nova-release-mgr** valida y aplica el gate.
-5. **nova-architect** aprueba la entrega (PR en rama separada).
+1. El operador crea el Goal y asigna la **incidencia raíz a `nova-architect`**.
+2. **nova-architect** descompone el objetivo (≤5 sub-tareas, sin cascadas) y **delega** las sub-incidencias anteriores, fijando el contrato del endpoint.
+3. **nova-service-gen** y **nova-frontend-gen** implementan en paralelo (backend Excel / frontend CSV+descarga).
+4. **nova-api-integr** documenta y verifica CORS.
+5. **nova-release-mgr** valida y aplica el gate; **nova-architect** revisa y aprueba la entrega (PR en rama separada).
