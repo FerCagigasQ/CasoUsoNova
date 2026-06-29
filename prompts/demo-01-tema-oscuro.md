@@ -3,10 +3,17 @@
 **Sprint de desarrollo**: Theming de la UI (Angular Material)
 **Duración estimada**: 2-3 horas
 **Complejidad**: Principiante
-**Agentes NOVA**: nova-architect, nova-frontend-gen, nova-api-integr (contrato de preferencia), nova-release-mgr
+**Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
+**Agentes que ejecutan**: nova-frontend-gen, nova-api-integr (contrato de preferencia), nova-release-mgr
 
 > Demo de desarrollo. El objetivo es **ver a los agentes NOVA escribir código** sobre la plataforma
 > y observar un **efecto visible en la UI** (estado inicial → final). No introduce lógica de negocio.
+
+> **Cómo se entrega este prompt.** El operador crea **un único objetivo (Goal) y una incidencia raíz
+> asignada a `nova-architect`** con el contenido de este PRD. **No se asignan sub-tareas a mano.**
+> `nova-architect` **recibe el objetivo, lo descompone en ≤5 sub-tareas y las delega** creando una
+> sub-incidencia por agente con sus dependencias (blockers), revisa el código entregado y aprueba la
+> release. El apartado 6 describe **la delegación que ejecuta el arquitecto**, no un reparto previo del operador.
 
 ---
 
@@ -60,22 +67,24 @@ dominio existente.
 **Guion**: abrir `http://localhost` → mostrar tema claro → pulsar el botón → la app pasa a oscuro
 (tabla, badges, diálogos) → recargar → sigue en oscuro.
 
-## 6. Equipo y reparto de trabajo
+## 6. Delegación que ejecuta `nova-architect`
 
-> Agentes de la organización **NOVA** (`QPaperClip/containers/nova-org`).
+> El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone y delega**
+> creando estas sub-incidencias (una por agente de la org **NOVA**, `QPaperClip/containers/nova-org`),
+> con dependencias entre ellas. No es un reparto hecho a mano por el operador.
 
-| Agente | Adapter | Responsabilidad en este PRD |
-|--------|---------|------------------------------|
-| **nova-architect** (CTO) | Claude Code | Descompone el PRD en ≤5 sub-tareas, define el contrato de `ThemeService` y, si aplica, el de preferencias. Revisa el código. |
-| **nova-frontend-gen** | Antigravity | Implementa `ThemeService`, los dos temas Material, el botón de la barra y la persistencia. Tests con Karma/Jasmine. |
-| **nova-api-integr** | Antigravity | (Ampliación) Define y documenta `GET/PUT /api/v1/preferences` en OpenAPI si se persiste en servidor. |
-| **nova-release-mgr** | Codex | Verifica build de producción (`ng build`) y arranque Docker; aplica la skill `nova-post-gen-validation` como gate. |
+| # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
+|---|----------------------------------------|-----------------|---------|------------|
+| 1 | Implementar `ThemeService`, los dos temas Material, el botón de la barra y la persistencia (tests Karma/Jasmine). | **nova-frontend-gen** | Antigravity | — |
+| 2 | (Ampliación) Definir y documentar `GET/PUT /api/v1/preferences` en OpenAPI si se persiste en servidor. | **nova-api-integr** | Antigravity | — |
+| 3 | Verificar build de producción (`ng build`) + arranque Docker; aplicar la skill `nova-post-gen-validation` como gate. | **nova-release-mgr** | Codex | #1 |
 
 `nova-async-comm` y `nova-ops-monitor` quedan en **standby** (no se necesitan eventos ni observabilidad nueva).
 
-### Flujo de ejecución
+### Flujo de ejecución (orquestado por el arquitecto)
 
-1. **nova-architect** descompone y asigna sub-tareas (modo demo, ≤5, sin cascadas).
-2. **nova-frontend-gen** implementa el conmutador y los temas.
-3. **nova-release-mgr** valida build + arranque y ejecuta el gate.
-4. **nova-architect** aprueba la entrega (PR en rama separada, sin merge directo a `main`).
+1. El operador crea el Goal y asigna la **incidencia raíz a `nova-architect`**.
+2. **nova-architect** descompone el objetivo y **delega** las sub-incidencias anteriores (modo demo, ≤5, sin cascadas).
+3. **nova-frontend-gen** implementa el conmutador y los temas.
+4. **nova-release-mgr** valida build + arranque y ejecuta el gate (bloqueado hasta que #1 termine).
+5. **nova-architect** revisa y aprueba la entrega (PR en rama separada, sin merge directo a `main`).
