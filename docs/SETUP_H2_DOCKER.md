@@ -2,7 +2,19 @@
 
 ## El Problema: "[Database "/root/test" not found]"
 
-El error aparece porque Docker intenta ejecutar el servicio sin la configuración correcta de H2.
+### Causa más frecuente: JDBC URL incorrecta en el formulario H2 Console
+
+> **IMPORTANTE**: Este error ocurre casi siempre porque el formulario de login de H2 Console
+> tiene por defecto `jdbc:h2:~/test` — en Docker eso se resuelve como `/root/test`.
+>
+> **Solución inmediata**: En `http://localhost:8080/h2-console`, cambia el campo
+> **JDBC URL** de `~/test` a `jdbc:h2:mem:testdb` antes de hacer clic en Connect.
+
+---
+
+### Causa secundaria: configuración incorrecta de Spring Boot
+
+El error también puede aparecer al arrancar si no existe `application-docker.yml`.
 
 ## Solución (3 pasos)
 
