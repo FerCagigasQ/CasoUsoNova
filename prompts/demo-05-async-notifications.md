@@ -27,6 +27,42 @@ This demo introduces **event-driven architecture**: guarantees emit events (crea
 
 ---
 
+## Agent Responsibilities
+
+### nova-async-comm (Messaging & Events)
+**Must implement for this demo:**
+- [ ] Event publisher in GuaranteeService (GUARANTEE_CREATED, ISSUED, AMENDED, CLAIMED, EXPIRED)
+- [ ] RabbitMQ/Kafka broker setup with `guarantees.events` exchange/topic
+- [ ] Message format: JSON with guaranteeId, eventType, timestamp, parties
+- [ ] Dead-letter queue for failed deliveries
+- [ ] Event retry logic (exponential backoff, max 3 retries)
+
+### nova-service-gen (Backend)
+**Must implement for this demo:**
+- [ ] `notifyGuaranteeCreated(guarantee)` method in NotificationService
+- [ ] `notifyGuaranteeIssued(guarantee)` method
+- [ ] `notifyClaimSubmitted(claim)` method
+- [ ] Integration with GuaranteeService (call notify* after state change)
+- [ ] RabbitTemplate configuration (Spring AMQP)
+
+### nova-frontend-gen (UI)
+**Must implement for this demo:**
+- [ ] WebSocket/SSE client setup for real-time updates
+- [ ] Subscribe to `/topic/guarantees` for status changes
+- [ ] Toast notifications on guarantee state change
+- [ ] Notification center component (history of all notifications)
+- [ ] Auto-refresh guarantee list on notification received
+
+### nova-ops-monitor (Infrastructure)
+**Must implement for this demo:**
+- [ ] RabbitMQ management UI monitoring
+- [ ] Prometheus metrics for event publish/consume rates
+- [ ] Grafana dashboard: Messages in queue, DLQ size, consumer lag
+- [ ] Alert on DLQ growth (indicates systemic issues)
+- [ ] Message throughput monitoring (events/sec)
+
+---
+
 ## Prerequisites (10 minutes)
 
 ### Add RabbitMQ to Docker Compose

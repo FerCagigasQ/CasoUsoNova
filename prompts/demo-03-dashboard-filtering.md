@@ -25,6 +25,35 @@ This demo showcases **portfolio management capabilities**: filtering guarantees 
 
 ---
 
+## Agent Responsibilities
+
+### nova-frontend-gen (UI)
+**Must implement for this demo:**
+- [ ] Filter UI: Status dropdown, Type dropdown, Date range picker
+- [ ] Table sorting: Click column headers to sort (amount, expiry date, etc.)
+- [ ] Pagination controls: Page selector, items-per-page dropdown
+- [ ] KPI cards: Total exposure, active guarantees, expiring soon, under review
+- [ ] Real-time data refresh
+- [ ] Responsive layout (Material breakpoints)
+
+### nova-api-integr (Integration)
+**Must implement for this demo:**
+- [ ] Query parameter support: `?status=ISSUED&type=PERFORMANCE&dateRange=30`
+- [ ] Pageable response format: `{content: [...], totalElements: N, currentPage: 0, pageSize: 20}`
+- [ ] Filter validation (enum checking for status/type values)
+- [ ] Database index optimization for filter queries
+- [ ] OpenAPI documentation for all filter parameters
+
+### nova-ops-monitor (Infrastructure)
+**Must implement for this demo:**
+- [ ] Query performance metrics (Prometheus)
+- [ ] Grafana dashboard showing KPIs
+- [ ] Database query optimization (EXPLAIN ANALYZE)
+- [ ] SLA monitoring for filter response time (<500ms)
+- [ ] Alert on slow queries (>1000ms)
+
+---
+
 ## Prerequisites (2 minutes)
 
 ### Services Running

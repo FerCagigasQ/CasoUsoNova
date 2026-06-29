@@ -25,6 +25,36 @@ This demo walks through the **complete lifecycle of a bank guarantee**, from cre
 
 ---
 
+## Agent Responsibilities
+
+### nova-service-gen (Backend)
+**Must implement for this demo:**
+- [ ] CRUD endpoints: `POST /guarantees`, `GET /guarantees/{id}`, `PUT /guarantees/{id}`
+- [ ] State transition endpoint: `POST /guarantees/{id}/issue` (DRAFT → ISSUED)
+- [ ] Amendment endpoint: `POST /guarantees/{id}/amendments`
+- [ ] Data validation (amounts, dates, parties before issuance)
+- [ ] Guarantee repository with filter methods
+- [ ] Seed data: 6 initial guarantees in various states
+
+### nova-frontend-gen (UI)
+**Must implement for this demo:**
+- [ ] Guarantee list component with status column
+- [ ] Guarantee detail view with tabs (General, Amendments, Claims)
+- [ ] Guarantee form (create/edit) with validation
+- [ ] Amendment dialog/form for adding amendments
+- [ ] Material Design styling (indigo-pink theme)
+- [ ] HTTP service integration to backend
+
+### nova-api-integr (Integration)
+**Must implement for this demo:**
+- [ ] OpenAPI/Swagger endpoint documentation
+- [ ] Request/response contract validation (DTO mapping)
+- [ ] API gateway routing (if applicable)
+- [ ] CORS configuration for frontend access
+- [ ] Error handling + consistent HTTP status codes
+
+---
+
 ## Prerequisites (5 minutes)
 
 ### Environment Setup

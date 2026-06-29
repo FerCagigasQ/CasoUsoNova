@@ -26,6 +26,36 @@ This demo shows the **complete claims lifecycle**: submitting a claim on an acti
 
 ---
 
+## Agent Responsibilities
+
+### nova-service-gen (Backend)
+**Must implement for this demo:**
+- [ ] Claim submission endpoint: `POST /guarantees/{id}/claims`
+- [ ] Claim status update endpoint: `PUT /guarantees/{id}/claims/{claimId}`
+- [ ] Claim listing endpoint: `GET /guarantees/{id}/claims`
+- [ ] Claim status enum: SUBMITTED, UNDER_REVIEW, PAID, REJECTED
+- [ ] State machine: Auto-update guarantee status to CLAIMED when claim submitted
+- [ ] Data validation: Ensure claim amount ≤ guarantee amount
+
+### nova-frontend-gen (UI)
+**Must implement for this demo:**
+- [ ] Claims tab in guarantee detail view
+- [ ] Claim submission form (amount, reason, date)
+- [ ] Claim list with status column
+- [ ] Status badge styling (color-coded)
+- [ ] Modal/dialog for claim form
+- [ ] Real-time refresh on form submission
+
+### nova-async-comm (Messaging)
+**Must implement for this demo:**
+- [ ] Event publishing on claim submission
+- [ ] Event publishing on claim status change
+- [ ] RabbitMQ broker configuration
+- [ ] Notification queue setup (for future email/Slack workers)
+- [ ] Event payload schema (ClaimSubmittedEvent, ClaimStatusChangedEvent)
+
+---
+
 ## Prerequisites (2 minutes)
 
 ### Services Running

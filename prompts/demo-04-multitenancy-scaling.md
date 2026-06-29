@@ -26,6 +26,41 @@ This demo shows how the NOVA platform scales to support **multiple independent b
 
 ---
 
+## Agent Responsibilities
+
+### nova-service-gen (Backend)
+**Must implement for this demo:**
+- [ ] Tenant context extraction from JWT/request headers
+- [ ] Automatic tenant_id filtering on all queries
+- [ ] Multi-instance state consistency (shared database or event sync)
+- [ ] Tenant-specific configurations (workflows, approval chains)
+- [ ] Audit logging per tenant (who accessed what, when)
+
+### nova-release-mgr (Docker & CI/CD)
+**Must implement for this demo:**
+- [ ] Docker Compose multi-instance setup (3+ backend containers)
+- [ ] Nginx load balancer configuration (round-robin/least connections)
+- [ ] Blue-green deployment automation
+- [ ] Health check configuration (Actuator endpoints)
+- [ ] Zero-downtime deployment strategy
+
+### nova-ops-monitor (Infrastructure)
+**Must implement for this demo:**
+- [ ] Per-instance metrics: CPU, memory, requests/sec, latency
+- [ ] Prometheus scrape config for multi-instance targets
+- [ ] Grafana dashboard: Instance health, load distribution, response times
+- [ ] Distributed tracing: Jaeger or Spring Cloud Sleuth
+- [ ] Alert on instance failure or high latency
+
+### nova-async-comm (Messaging)
+**Must implement for this demo:**
+- [ ] RabbitMQ cluster setup (or single broker with tenant-specific exchanges)
+- [ ] Tenant-specific event topics/queues
+- [ ] Event routing by tenant_id
+- [ ] Dead-letter queue handling
+
+---
+
 ## Prerequisites (5 minutes)
 
 ### Scale Up Docker Compose
