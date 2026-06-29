@@ -3,6 +3,15 @@ export interface MonthlyCount {
   count: number;
 }
 
+export interface TopBeneficiary {
+  beneficiaryId: number;
+  firstName: string;
+  lastName: string;
+  taxId: string;
+  guaranteeCount: number;
+  totalAmount: number;
+}
+
 export interface MetricsDTO {
   total: number;
   byStatus: Record<string, number>;
@@ -10,7 +19,9 @@ export interface MetricsDTO {
   byCurrency: Record<string, number>;
   byMonth: MonthlyCount[];
   totalAmount: number;
+  totalAmountByCurrency: Record<string, number>;
   averageAmount: number;
   activeCount: number;
   expiringIn30Days: number;
+  topBeneficiaries: TopBeneficiary[];
 }

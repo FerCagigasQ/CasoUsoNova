@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Subject, takeUntil } from 'rxjs';
+import { GuaranteeEventsService } from '../../services/guarantee-events.service';
 import { MetricsService } from '../../services/metrics.service';
 import { MetricsDTO } from '../../models/metrics.model';
 
@@ -13,18 +15,38 @@ import { MetricsDTO } from '../../models/metrics.model';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   metrics: MetricsDTO | null = null;
   loading = true;
   error = false;
+  private readonly destroy$ = new Subject<void>();
 
-  constructor(private metricsService: MetricsService) {}
+  constructor(
+    private metricsService: MetricsService,
+    private guaranteeEventsService: GuaranteeEventsService
+  ) {}
 
   ngOnInit(): void {
+    this.loadMetrics();
+    this.guaranteeEventsService.changes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => this.loadMetrics(),
+        error: () => undefined
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadMetrics(): void {
     this.metricsService.getMetrics().subscribe({
       next: data => {
         this.metrics = data;
         this.loading = false;
+        this.error = false;
       },
       error: () => {
         this.error = true;

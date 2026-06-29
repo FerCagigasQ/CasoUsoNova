@@ -3,12 +3,14 @@ package com.example.guarantees.repository;
 import com.example.guarantees.domain.Guarantee;
 import com.example.guarantees.domain.GuaranteeStatus;
 import com.example.guarantees.domain.GuaranteeType;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public interface GuaranteeRepository extends JpaRepository<Guarantee, Long> {
@@ -146,6 +148,50 @@ public interface GuaranteeRepository extends JpaRepository<Guarantee, Long> {
                                            @Param("issueDateTo") LocalDate issueDateTo,
                                            @Param("expiryDateFrom") LocalDate expiryDateFrom,
                                            @Param("expiryDateTo") LocalDate expiryDateTo);
+
+    @Query("""
+        SELECT UPPER(g.currency), COALESCE(SUM(g.amount), 0)
+        FROM Guarantee g
+        WHERE (:status IS NULL OR g.status = :status)
+          AND (:type IS NULL OR g.type = :type)
+          AND (:currency IS NULL OR UPPER(g.currency) = UPPER(:currency))
+          AND (:issueDateFrom IS NULL OR g.issueDate >= :issueDateFrom)
+          AND (:issueDateTo IS NULL OR g.issueDate <= :issueDateTo)
+          AND (:expiryDateFrom IS NULL OR g.expiryDate >= :expiryDateFrom)
+          AND (:expiryDateTo IS NULL OR g.expiryDate <= :expiryDateTo)
+        GROUP BY UPPER(g.currency)
+        ORDER BY UPPER(g.currency)
+        """)
+    List<Object[]> sumAmountByCurrencyFiltered(@Param("status") GuaranteeStatus status,
+                                               @Param("type") GuaranteeType type,
+                                               @Param("currency") String currency,
+                                               @Param("issueDateFrom") LocalDate issueDateFrom,
+                                               @Param("issueDateTo") LocalDate issueDateTo,
+                                               @Param("expiryDateFrom") LocalDate expiryDateFrom,
+                                               @Param("expiryDateTo") LocalDate expiryDateTo);
+
+    @Query("""
+        SELECT b.id, b.firstName, b.lastName, b.taxId, COUNT(g), COALESCE(SUM(g.amount), 0)
+        FROM Guarantee g
+        JOIN g.beneficiary b
+        WHERE (:status IS NULL OR g.status = :status)
+          AND (:type IS NULL OR g.type = :type)
+          AND (:currency IS NULL OR UPPER(g.currency) = UPPER(:currency))
+          AND (:issueDateFrom IS NULL OR g.issueDate >= :issueDateFrom)
+          AND (:issueDateTo IS NULL OR g.issueDate <= :issueDateTo)
+          AND (:expiryDateFrom IS NULL OR g.expiryDate >= :expiryDateFrom)
+          AND (:expiryDateTo IS NULL OR g.expiryDate <= :expiryDateTo)
+        GROUP BY b.id, b.firstName, b.lastName, b.taxId
+        ORDER BY COUNT(g) DESC, COALESCE(SUM(g.amount), 0) DESC, b.lastName ASC
+        """)
+    List<Object[]> findTopBeneficiariesFiltered(@Param("status") GuaranteeStatus status,
+                                                @Param("type") GuaranteeType type,
+                                                @Param("currency") String currency,
+                                                @Param("issueDateFrom") LocalDate issueDateFrom,
+                                                @Param("issueDateTo") LocalDate issueDateTo,
+                                                @Param("expiryDateFrom") LocalDate expiryDateFrom,
+                                                @Param("expiryDateTo") LocalDate expiryDateTo,
+                                                Pageable pageable);
 
     @Query("""
         SELECT COUNT(g)

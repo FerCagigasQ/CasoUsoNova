@@ -41,14 +41,16 @@ public class GuaranteeService {
     private final IssuingBankRepository issuingBankRepository;
     private final AmendmentRepository amendmentRepository;
     private final ClaimRepository claimRepository;
+    private final GuaranteeEventService guaranteeEventService;
 
-    public GuaranteeService(GuaranteeRepository guaranteeRepository, ApplicantRepository applicantRepository, BeneficiaryRepository beneficiaryRepository, IssuingBankRepository issuingBankRepository, AmendmentRepository amendmentRepository, ClaimRepository claimRepository) {
+    public GuaranteeService(GuaranteeRepository guaranteeRepository, ApplicantRepository applicantRepository, BeneficiaryRepository beneficiaryRepository, IssuingBankRepository issuingBankRepository, AmendmentRepository amendmentRepository, ClaimRepository claimRepository, GuaranteeEventService guaranteeEventService) {
         this.guaranteeRepository = guaranteeRepository;
         this.applicantRepository = applicantRepository;
         this.beneficiaryRepository = beneficiaryRepository;
         this.issuingBankRepository = issuingBankRepository;
         this.amendmentRepository = amendmentRepository;
         this.claimRepository = claimRepository;
+        this.guaranteeEventService = guaranteeEventService;
     }
 
     public List<GuaranteeDTO> findAll(GuaranteeStatus status, GuaranteeType type) {
@@ -96,7 +98,9 @@ public class GuaranteeService {
         );
 
         Guarantee saved = guaranteeRepository.save(guarantee);
-        return toDTO(saved);
+        GuaranteeDTO dto = toDTO(saved);
+        publishChange(saved, "CREATED");
+        return dto;
     }
 
     @CacheEvict(value = "metrics", allEntries = true)
@@ -123,7 +127,9 @@ public class GuaranteeService {
         guarantee.setIssuingBank(issuingBank);
 
         Guarantee updated = guaranteeRepository.save(guarantee);
-        return toDTO(updated);
+        GuaranteeDTO dto = toDTO(updated);
+        publishChange(updated, "UPDATED");
+        return dto;
     }
 
     @CacheEvict(value = "metrics", allEntries = true)
@@ -131,7 +137,10 @@ public class GuaranteeService {
         if (!guaranteeRepository.existsById(id)) {
             throw new IllegalArgumentException("Guarantee not found with id: " + id);
         }
+        Guarantee guarantee = guaranteeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Guarantee not found with id: " + id));
         guaranteeRepository.deleteById(id);
+        publishChange(guarantee, "DELETED");
     }
 
     @CacheEvict(value = "metrics", allEntries = true)
@@ -145,7 +154,9 @@ public class GuaranteeService {
 
         guarantee.setStatus(GuaranteeStatus.ISSUED);
         Guarantee updated = guaranteeRepository.save(guarantee);
-        return toDTO(updated);
+        GuaranteeDTO dto = toDTO(updated);
+        publishChange(updated, "ISSUED");
+        return dto;
     }
 
     @CacheEvict(value = "metrics", allEntries = true)
@@ -171,7 +182,9 @@ public class GuaranteeService {
         guarantee.setExpiryDate(newExpiryDate);
 
         Guarantee updated = guaranteeRepository.save(guarantee);
-        return toDTO(updated);
+        GuaranteeDTO dto = toDTO(updated);
+        publishChange(updated, "AMENDED");
+        return dto;
     }
 
     @CacheEvict(value = "metrics", allEntries = true)
@@ -195,7 +208,9 @@ public class GuaranteeService {
         guarantee.setStatus(GuaranteeStatus.CLAIMED);
 
         Guarantee updated = guaranteeRepository.save(guarantee);
-        return toDTO(updated);
+        GuaranteeDTO dto = toDTO(updated);
+        publishChange(updated, "CLAIMED");
+        return dto;
     }
 
     public List<ClaimDTO> listClaims(Long guaranteeId) {
@@ -211,6 +226,15 @@ public class GuaranteeService {
                         claim.getReason()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    private void publishChange(Guarantee guarantee, String action) {
+        guaranteeEventService.publish(
+                guarantee.getId(),
+                action,
+                guarantee.getReference(),
+                guarantee.getStatus().name()
+        );
     }
 
     private GuaranteeDTO toDTO(Guarantee guarantee) {

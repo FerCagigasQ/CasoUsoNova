@@ -11,26 +11,31 @@ public class MetricsDTO {
     private Map<String, Long> byCurrency;
     private List<MonthlyCountDTO> byMonth;
     private BigDecimal totalAmount;
+    private Map<String, BigDecimal> totalAmountByCurrency;
     private BigDecimal averageAmount;
     private Long activeCount;
     private Long expiringIn30Days;
+    private List<TopBeneficiaryDTO> topBeneficiaries;
 
     public MetricsDTO(Long total, Map<String, Long> byStatus, Map<String, Long> byType, List<MonthlyCountDTO> byMonth) {
-        this(total, byStatus, byType, Map.of(), byMonth, BigDecimal.ZERO, BigDecimal.ZERO, 0L, 0L);
+        this(total, byStatus, byType, Map.of(), byMonth, BigDecimal.ZERO, Map.of(), BigDecimal.ZERO, 0L, 0L, List.of());
     }
 
     public MetricsDTO(Long total, Map<String, Long> byStatus, Map<String, Long> byType, Map<String, Long> byCurrency,
-                      List<MonthlyCountDTO> byMonth, BigDecimal totalAmount, BigDecimal averageAmount,
-                      Long activeCount, Long expiringIn30Days) {
+                      List<MonthlyCountDTO> byMonth, BigDecimal totalAmount, Map<String, BigDecimal> totalAmountByCurrency,
+                      BigDecimal averageAmount, Long activeCount, Long expiringIn30Days,
+                      List<TopBeneficiaryDTO> topBeneficiaries) {
         this.total = total;
         this.byStatus = byStatus;
         this.byType = byType;
         this.byCurrency = byCurrency;
         this.byMonth = byMonth;
         this.totalAmount = totalAmount;
+        this.totalAmountByCurrency = totalAmountByCurrency;
         this.averageAmount = averageAmount;
         this.activeCount = activeCount;
         this.expiringIn30Days = expiringIn30Days;
+        this.topBeneficiaries = topBeneficiaries;
     }
 
     public Long getTotal() { return total; }
@@ -39,7 +44,9 @@ public class MetricsDTO {
     public Map<String, Long> getByCurrency() { return byCurrency; }
     public List<MonthlyCountDTO> getByMonth() { return byMonth; }
     public BigDecimal getTotalAmount() { return totalAmount; }
+    public Map<String, BigDecimal> getTotalAmountByCurrency() { return totalAmountByCurrency; }
     public BigDecimal getAverageAmount() { return averageAmount; }
     public Long getActiveCount() { return activeCount; }
     public Long getExpiringIn30Days() { return expiringIn30Days; }
+    public List<TopBeneficiaryDTO> getTopBeneficiaries() { return topBeneficiaries; }
 }

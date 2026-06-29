@@ -4,6 +4,9 @@ import com.example.guarantees.dto.MetricsDTO;
 import com.example.guarantees.domain.GuaranteeStatus;
 import com.example.guarantees.domain.GuaranteeType;
 import com.example.guarantees.service.MetricsService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,9 +30,11 @@ import java.time.LocalDate;
 public class MetricsController {
 
     private final MetricsService metricsService;
+    private final MeterRegistry meterRegistry;
 
-    public MetricsController(MetricsService metricsService) {
+    public MetricsController(MetricsService metricsService, MeterRegistry meterRegistry) {
         this.metricsService = metricsService;
+        this.meterRegistry = meterRegistry;
     }
 
     @GetMapping
@@ -57,9 +62,13 @@ public class MetricsController {
                     { "month": "2024-11", "count": 1 }
                   ],
                   "totalAmount": 3305000.00,
+                  "totalAmountByCurrency": { "EUR": 825000.00, "GBP": 380000.00, "USD": 2100000.00 },
                   "averageAmount": 550833.33,
                   "activeCount": 3,
-                  "expiringIn30Days": 0
+                  "expiringIn30Days": 0,
+                  "topBeneficiaries": [
+                    { "beneficiaryId": 3, "firstName": "Li", "lastName": "Wei", "taxId": "CN-555666", "guaranteeCount": 2, "totalAmount": 975000.00 }
+                  ]
                 }
                 """)
         )
@@ -68,6 +77,10 @@ public class MetricsController {
         @Parameter(description = "Filter by guarantee status") @RequestParam(required = false) GuaranteeStatus status,
         @Parameter(description = "Filter by guarantee type") @RequestParam(required = false) GuaranteeType type,
         @Parameter(description = "Filter by ISO currency code") @RequestParam(required = false) String currency,
+        @Parameter(description = "Alias for issueDateFrom. Filter by issue date from, inclusive, ISO-8601 yyyy-MM-dd")
+        @RequestParam(required = false, name = "from") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @Parameter(description = "Alias for issueDateTo. Filter by issue date to, inclusive, ISO-8601 yyyy-MM-dd")
+        @RequestParam(required = false, name = "to") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
         @Parameter(description = "Filter by issue date from, inclusive, ISO-8601 yyyy-MM-dd")
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issueDateFrom,
         @Parameter(description = "Filter by issue date to, inclusive, ISO-8601 yyyy-MM-dd")
@@ -77,7 +90,35 @@ public class MetricsController {
         @Parameter(description = "Filter by expiry date to, inclusive, ISO-8601 yyyy-MM-dd")
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiryDateTo) {
 
-        MetricsDTO metrics = metricsService.getMetrics(status, type, currency, issueDateFrom, issueDateTo, expiryDateFrom, expiryDateTo);
-        return ResponseEntity.ok(metrics);
+        Timer.Sample sample = Timer.start(meterRegistry);
+        String outcome = "success";
+        try {
+            LocalDate effectiveIssueDateFrom = issueDateFrom != null ? issueDateFrom : from;
+            LocalDate effectiveIssueDateTo = issueDateTo != null ? issueDateTo : to;
+            MetricsDTO metrics = metricsService.getMetrics(status, type, currency, effectiveIssueDateFrom, effectiveIssueDateTo, expiryDateFrom, expiryDateTo);
+            return ResponseEntity.ok(metrics);
+        } catch (RuntimeException ex) {
+            outcome = "error";
+            throw ex;
+        } finally {
+            metricsRequestCounter(outcome).increment();
+            sample.stop(metricsResponseTimer(outcome));
+        }
+    }
+
+    private Counter metricsRequestCounter(String outcome) {
+        return Counter.builder("nova.metrics.requests")
+            .description("Total requests to the dashboard metrics API")
+            .tag("endpoint", "/api/v1/metrics")
+            .tag("outcome", outcome)
+            .register(meterRegistry);
+    }
+
+    private Timer metricsResponseTimer(String outcome) {
+        return Timer.builder("nova.metrics.response.time")
+            .description("Response time for the dashboard metrics API")
+            .tag("endpoint", "/api/v1/metrics")
+            .tag("outcome", outcome)
+            .register(meterRegistry);
     }
 }
