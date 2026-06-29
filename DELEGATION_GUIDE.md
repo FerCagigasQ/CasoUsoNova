@@ -45,13 +45,13 @@ For each `[ ]` checkbox in the "Proposed Improvements" section, create one issue
 **Issue Body Template**:
 ```markdown
 ## Context
-Demo: [Demo 5: Async Notification System](./prompts/demo-05-async-notifications.md)
+Demo: [Demo 5: Internacionalización ES/EN](./prompts/demo-05-internacionalizacion.md)
 
 ## Task
 [Copy the improvement proposal from the demo]
 
-Example from demo-05-async-notifications.md:
-- **Kafka integration** as RabbitMQ alternative (higher throughput)
+Example from demo-05-internacionalizacion.md:
+- **Selector de idioma ES/EN** con cambio en caliente (ngx-translate)
 
 ## Acceptance Criteria
 - [ ] Implementation complete per spec
@@ -61,11 +61,11 @@ Example from demo-05-async-notifications.md:
 
 ## Links
 - Parent Issue: NOV-2
-- Demo Guide: prompts/demo-05-async-notifications.md
+- Demo Guide: prompts/demo-05-internacionalizacion.md
 - Architecture: See "Technical Details" section of demo
 ```
 
-**Labels**: `agent:nova-async-comm`, `demo:5`, `phase:2-implementation`
+**Labels**: `agent:nova-frontend-gen`, `demo:5`, `phase:2-implementation`
 
 ---
 
@@ -273,11 +273,11 @@ Example from demo-05-async-notifications.md:
 
 All reference material in: **`prompts/`** folder
 - `prompts/README.md` — Overview & quick reference
-- `prompts/demo-01-guarantee-lifecycle.md`
-- `prompts/demo-02-claims-workflow.md`
-- `prompts/demo-03-dashboard-filtering.md`
-- `prompts/demo-04-multitenancy-scaling.md`
-- `prompts/demo-05-async-notifications.md`
+- `prompts/demo-01-tema-oscuro.md`
+- `prompts/demo-02-exportacion-datos.md`
+- `prompts/demo-03-busqueda-global.md`
+- `prompts/demo-04-dashboard-kpis.md`
+- `prompts/demo-05-internacionalizacion.md`
 
 Each demo has:
 - Step-by-step guide (for demo presenters)
