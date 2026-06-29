@@ -1,193 +1,215 @@
 # Demo 1: Guarantee Lifecycle (Create → Issue → Amend)
 
-**Development Sprint**: Guarantee CRUD + State Transitions  
-**Estimated Duration**: 4-6 hours (full implementation + testing)  
-**Target**: Complete guarantee lifecycle endpoints + UI + API documentation  
-**Agents**: nova-service-gen, nova-frontend-gen, nova-api-integr
+> **Cómo leer esta demo**: este documento NO es una lista de tareas para que un humano las teclee.
+> Es el **guion de una demo de orquestación**: muestra cómo un único **objetivo de negocio**
+> entra por el tablero de **Paperclip** y la organización **NOVA** (8 agentes autónomos) lo
+> ejecuta de principio a fin — con descomposición, heartbeats, checkout atómico, presupuestos,
+> aprobaciones humanas, memoria compartida y auditoría — sin que nadie reparta trabajo a mano.
+
+**Escenario**: Ciclo de vida de un aval bancario (CRUD + transiciones de estado)
+**Duración de la presentación**: 30–40 min
+**Lo que demuestra**: orquestación multi-agente de Paperclip sobre el stack NOVA (Spring Boot + Angular/Thin3)
+**Org responsable**: NOVA Development Team (8 agentes) — gobernada desde un solo tablero
 
 ---
 
-## Business Context
+## 1. La idea en una frase
 
-Bank guarantees flow through a lifecycle: created in DRAFT status, issued (transitioned to ISSUED), amended (status → AMENDED), and eventually claimed or expired. The system must validate state transitions and maintain audit trail per ICC URDG 758.
+> "Quiero un servicio NOVA que gestione el ciclo de vida de un aval: crearlo en DRAFT,
+> emitirlo (ISSUED), enmendarlo (AMENDED), con su frontal para operarlo, validando las
+> transiciones de estado y con trazabilidad ICC URDG 758."
 
----
-
-## Task Breakdown
-
-### nova-service-gen (Backend Services)
-
-**Objective**: Implement complete guarantee CRUD + lifecycle management
-
-**Must deliver**:
-
-1. **Guarantee Entity & JPA Mapping**
-   - [ ] Create `Guarantee` JPA entity with fields: id, reference (UNIQUE), type (enum), amount (BigDecimal), currency, issueDate, expiryDate, status (enum), applicant_id (FK), beneficiary_id (FK), issuing_bank_id (FK)
-   - [ ] Create `GuaranteeStatus` enum: DRAFT, ISSUED, AMENDED, CLAIMED, EXPIRED, CANCELLED
-   - [ ] Create `GuaranteeType` enum: PERFORMANCE, ADVANCE_PAYMENT, BID_BOND, WARRANTY
-   - [ ] Set up relationships: ManyToOne to Applicant, Beneficiary, IssuingBank (all EAGER)
-   - [ ] Create `Amendment` and `Claim` entities with OneToMany back-references
-
-2. **Repository Layer**
-   - [ ] Create `GuaranteeRepository extends JpaRepository<Guarantee, Long>`
-   - [ ] Add filter methods: `findByStatus(GuaranteeStatus)`, `findByType(GuaranteeType)`, `findByStatusAndType(...)`
-   - [ ] Add database indexes on status, type, and composite (status, type)
-
-3. **REST Endpoints**
-   - [ ] `GET /api/v1/guarantees` — List all (support `?status=ISSUED&type=PERFORMANCE` filters)
-   - [ ] `GET /api/v1/guarantees/{id}` — Get single guarantee with all relationships
-   - [ ] `POST /api/v1/guarantees` — Create new (status auto-set to DRAFT)
-   - [ ] `PUT /api/v1/guarantees/{id}` — Update guarantee (amount, dates, parties)
-   - [ ] `DELETE /api/v1/guarantees/{id}` — Delete (only in DRAFT status)
-   - [ ] `POST /api/v1/guarantees/{id}/issue` — State transition DRAFT → ISSUED
-   - [ ] `POST /api/v1/guarantees/{id}/amendments` — Add amendment, auto-transition to AMENDED
-   - [ ] Response format: GuaranteeDTO with nested Applicant, Beneficiary, IssuingBank objects
-
-4. **Validation & State Machine**
-   - [ ] Before issuance: validate amount > 0, expiryDate > issueDate, parties non-null
-   - [ ] State machine: Only allow ISSUED guarantees to be amended/claimed
-   - [ ] Amendment must not exceed 3 per guarantee (business rule)
-   - [ ] Return 400 Bad Request if state transition invalid, 404 if guarantee not found
-
-5. **Seed Data**
-   - [ ] Create `DataSeeder` component that runs on startup
-   - [ ] Insert 6 test guarantees in various states (DRAFT, ISSUED, AMENDED, CLAIMED, EXPIRED)
-   - [ ] Create 3 Applicants, 3 Beneficiaries, 3 IssuingBanks
-
-6. **DTOs**
-   - [ ] Create `GuaranteeDTO`, `ApplicantDTO`, `BeneficiaryDTO`, `IssuingBankDTO`, `AmendmentDTO`, `ClaimDTO`
-   - [ ] Ensure field names match frontend contract exactly (reference, issueDate, expiryDate, NOT startDate/endDate)
-
-**Success Criteria**:
-- ✅ All 9 endpoints implemented and return correct HTTP status codes (201 CREATE, 200 OK, 400 Bad Request, 404 Not Found)
-- ✅ State transitions validated (reject invalid transitions with error message)
-- ✅ Seed data loads on startup
-- ✅ Unit tests for repository, service, controller (>80% coverage)
-- ✅ Swagger documentation auto-generated (OpenAPI 3.0)
+El operador **no** abre 9 tickets técnicos. Crea **un objetivo** y **una incidencia raíz**.
+A partir de ahí, **Paperclip y la organización NOVA hacen el resto**. Esta demo enseña *cómo*.
 
 ---
 
-### nova-frontend-gen (Angular UI)
+## 2. La organización que ejecuta la demo (Org Chart de Paperclip)
 
-**Objective**: Build guarantee management UI with forms, list, detail view
+Paperclip modela una **empresa**, no un pila de scripts: cada agente tiene jefe, cargo, permisos
+y presupuesto. Estos son los 8 agentes que intervienen (todos visibles en el org chart del tablero):
 
-**Must deliver**:
+| Agente | Cargo / Rol Paperclip | Reporta a | Adapter | Presupuesto/mes | Papel en la Demo 1 |
+|--------|----------------------|-----------|---------|-----------------|--------------------|
+| **nova-architect** | Arquitecto Principal / `ceo` | — (raíz) | Claude Code | 120 € | Recibe el objetivo, decide arquitectura, **descompone en ≤5 sub-tareas** y aprueba |
+| **nova-repo-provisioner** | DevOps / Configurador de Repos | architect | Claude Code | 50 € | Bootstrap del repo: scripts, `.gitignore`, verificación del toolchain |
+| **nova-service-gen** | Backend Expert / `engineer` | architect | Codex | 100 € | Genera el servicio API del aval: entidad, repos, endpoints, máquina de estados, seed |
+| **nova-frontend-gen** | Frontend Expert / Thin3 | architect | Antigravity | 80 € | Genera el frontal Angular/Thin3: lista, detalle, formularios, diálogo de enmienda |
+| **nova-api-integr** | Integration / API Gateway | service-gen | Antigravity | 70 € | Contrato front-back, Swagger/OpenAPI, CORS, manejo de errores |
+| **nova-async-comm** | Messaging / Async | service-gen | Codex | 70 € | *(Standby)* eventos de ciclo de vida vía ActiveMQ/SSE — opcional, fuera de scope demo |
+| **nova-release-mgr** | Release & Deploy | architect | Codex | 60 € | Dockerfile + `docker-compose` + gate de validación post-generación |
+| **nova-ops-monitor** | Operations / Monitoring | release-mgr | Codex | 50 € | *(Standby)* salud local (`run-local.sh`, healthchecks) — opcional en modo demo |
 
-1. **Guarantee List Component**
-   - [ ] Display table: reference, type, amount, currency, status, issueDate, expiryDate
-   - [ ] Add status badge (color-coded: blue=DRAFT, green=ISSUED, orange=AMENDED, red=CLAIMED, gray=EXPIRED)
-   - [ ] Add type badge (color variations)
-   - [ ] Support sorting by clicking column headers
-   - [ ] Support pagination (20 items/page default, configurable)
-   - [ ] Add status filter dropdown (multiselect: DRAFT, ISSUED, AMENDED, etc.)
-   - [ ] Add type filter dropdown (multiselect)
-   - [ ] Click row to navigate to detail view
-
-2. **Guarantee Detail Component**
-   - [ ] Show guarantee info in read-only format
-   - [ ] Tabs: General, Amendments, Claims
-   - [ ] General tab: reference, type, amount, currency, dates, applicant (firstName, lastName, email), beneficiary (same), issuing bank (name, bic, country)
-   - [ ] Button: "Issue Guarantee" (DRAFT→ISSUED transition, visible only if status=DRAFT)
-   - [ ] Button: "Edit" (disabled if not DRAFT)
-   - [ ] Button: "Delete" (only if DRAFT)
-
-3. **Guarantee Form (Create/Edit)**
-   - [ ] Modal/page with form fields: reference, type (dropdown), amount, currency (dropdown), issueDate (date picker), expiryDate, applicant (autocomplete or dropdown), beneficiary (dropdown), issuing bank (dropdown)
-   - [ ] Validation: amount > 0, expiryDate > issueDate, all fields required
-   - [ ] On submit: POST /api/v1/guarantees (create) or PUT /api/v1/guarantees/{id} (update)
-   - [ ] Show success/error toast notification
-
-4. **Amendment Dialog**
-   - [ ] Modal triggered from Amendments tab
-   - [ ] Form fields: description (textarea), newAmount (decimal), newExpiryDate (date picker)
-   - [ ] On submit: POST /api/v1/guarantees/{id}/amendments
-   - [ ] Auto-refresh guarantee detail after success
-
-5. **Material Design**
-   - [ ] Use Angular Material table, buttons, forms, dialogs
-   - [ ] Apply indigo-pink theme
-   - [ ] Responsive layout (breakpoints for mobile/tablet)
-   - [ ] Consistent spacing and typography
-
-6. **HTTP Integration**
-   - [ ] Create `GuaranteeService` with methods: list(), getById(), create(), update(), delete(), issue(), addAmendment()
-   - [ ] Use `HttpClient` with proper error handling
-   - [ ] Auto-convert JSON responses to TypeScript models
-
-**Success Criteria**:
-- ✅ All UI components render without console errors
-- ✅ Forms submit data in correct shape (match backend DTO expectations)
-- ✅ Guarantees can be created, viewed, issued, amended through UI
-- ✅ Responsive design works on mobile/desktop
-- ✅ TypeScript strict mode passes (no `any` types)
-- ✅ Unit tests for services and components (>70% coverage)
+> **Modo demo (directiva de la empresa)**: el arquitecto delega **como máximo 5 sub-tareas** por
+> incidencia raíz y **no crea cascadas**. Por eso `nova-async-comm` y `nova-ops-monitor` quedan
+> en *standby*: aparecen en el org chart y están disponibles, pero solo entran si el flujo lo
+> exige. La demo enseña justo esto: **la gobernanza limita el scope automáticamente.**
 
 ---
 
-### nova-api-integr (Service Integration)
+## 3. Capacidades de Paperclip que esta demo pone en escena
 
-**Objective**: Ensure backend/frontend contract integrity and API documentation
+Cada fila es algo que se **ve en pantalla** durante la presentación, no teoría:
 
-**Must deliver**:
-
-1. **OpenAPI/Swagger Documentation**
-   - [ ] Auto-generate Swagger UI from Spring Boot annotations (@Operation, @ApiResponse, etc.)
-   - [ ] Verify endpoint at http://localhost:8080/swagger-ui.html
-   - [ ] Verify OpenAPI JSON at http://localhost:8080/v3/api-docs
-   - [ ] Document all query parameters, request bodies, responses
-   - [ ] Include example values (e.g., BG-2026-001, EUR, 50000)
-
-2. **Request/Response Contract Validation**
-   - [ ] Verify field names match exactly: reference (not refNumber), issueDate (not startDate), expiryDate (not endDate)
-   - [ ] Verify nested objects returned: applicant {firstName, lastName, email, ...}, not just applicantId string
-   - [ ] Verify enum values (DRAFT, ISSUED, etc.) returned as strings, not numbers
-   - [ ] Add validation layer: validate incoming requests against constraints (amount > 0, etc.)
-
-3. **CORS Configuration**
-   - [ ] Allow frontend (http://localhost:4200) to call backend (http://localhost:8080)
-   - [ ] Configure in `WebConfig` or `SecurityConfig`
-
-4. **Error Handling**
-   - [ ] Return 400 Bad Request with error message for invalid transitions
-   - [ ] Return 404 Not Found when guarantee not found
-   - [ ] Return 409 Conflict if concurrent update detected
-   - [ ] Consistent error response format: `{error: "message", status: 400}`
-
-5. **Integration Testing**
-   - [ ] Test create → issue → amend flow end-to-end
-   - [ ] Verify frontend receives correct response shape
-   - [ ] Test filter queries (?status=ISSUED&type=PERFORMANCE)
-
-**Success Criteria**:
-- ✅ Swagger UI shows all 9 endpoints with correct parameters
-- ✅ Frontend can successfully call all endpoints (no 400/409 errors from contract mismatch)
-- ✅ CORS allows cross-origin requests
-- ✅ Error responses include helpful messages
+| Capacidad Paperclip | Dónde se ve en la Demo 1 |
+|---------------------|--------------------------|
+| 🎯 **Goal alignment** | La incidencia raíz cuelga del objetivo "Ciclo de vida del aval"; cada sub-tarea hereda el *por qué* (goal ancestry visible en cada ticket) |
+| 🧩 **Descomposición jerárquica** | El architect crea ≤5 sub-tareas con `parentId` → árbol de trabajo navegable |
+| 💓 **Heartbeats** | Los agentes despiertan por schedule y por evento (asignación, @mención); no hay que lanzarlos a mano |
+| 🔒 **Checkout atómico / single-assignee** | Dos agentes nunca cogen la misma tarea; lock de ejecución visible en el estado del ticket |
+| 🔗 **Blocker dependencies** | "Frontal" se marca *blocked by* "API"; "Integración" *blocked by* "API". El tablero respeta el orden |
+| 🛡️ **Governance & approvals** | La emisión del aval (DRAFT→ISSUED) y el merge a `main` pasan por **approval gate** del operador |
+| 💰 **Budget & cost control** | Coste por agente/tarea/modelo en vivo; si un agente agota su presupuesto, **se auto-pausa** |
+| 🧠 **Memoria de agentes** | Cada agente busca memorias previas (p. ej. "contrato DTO front-back") y escribe `lesson`/`pattern`/`decision` al terminar |
+| 📚 **Runtime skill injection** | Los agentes cargan skills NOVA (`nova-cli-commands`, `nova-post-gen-validation`…) en tiempo de ejecución, sin reentrenar |
+| 🗂️ **Workspaces aislados** | Cada run trabaja en su worktree/branch; el frontal expone **preview URL** del runtime |
+| 📦 **Work products / artefactos** | El Swagger generado, capturas de la UI y el `docker-compose` se adjuntan como work products inspeccionables |
+| 🕓 **Routines & schedules** | *(Opcional)* una rutina cron puede re-validar el contrato Swagger cada noche y abrir incidencia si rompe |
+| 🧾 **Activity & audit log** | Toda mutación (checkout, comentario, aprobación, coste, cambio de estado) queda en log inmutable |
+| 🏢 **Multi-company isolation** | NOVA es una empresa entre varias en el mismo despliegue; datos y auditoría aislados |
+| 🔌 **Bring your own agent** | Conviven adapters distintos: Claude Code, Codex y Antigravity bajo un mismo org chart |
 
 ---
 
-## Verification Checklist
+## 4. Flujo de la demo, paso a paso
 
-**After all agents complete their tasks**:
+Cada paso indica **qué hace el operador**, **qué hace la organización** y **qué señalar en la UI de Paperclip**.
 
-- [ ] Run `docker compose up --build` — both services start successfully
-- [ ] Navigate to http://localhost:4200 → Guarantee list loads (6 seed guarantees visible)
-- [ ] Create a new guarantee via UI → POST /api/v1/guarantees succeeds → new guarantee appears in list
-- [ ] Issue the guarantee via UI → status changes DRAFT → ISSUED
-- [ ] Add amendment → status changes ISSUED → AMENDED
-- [ ] View in H2 Console → 7 guarantees total, 1 in AMENDED status
-- [ ] Filter by status=AMENDED → shows only amended guarantee
-- [ ] Delete attempt on AMENDED guarantee → returns error (not allowed)
-- [ ] Swagger UI shows all endpoints
+### Paso 0 — Preparación (antes de la demo)
+- La empresa **NOVA Development Team** está importada en Paperclip (`containers/nova-org`), con los 8 agentes, presupuestos y skills cargados.
+- El secreto `COSMOS_CLI_TOKEN` y `NOVA_HOME` están provisionados (inputs declarados por agente).
+- **Señalar**: org chart con los 8 agentes; presupuesto mensual de la empresa (600 €) y por agente.
 
-**Definition of Done for Demo 1**: 
-All 3 agents complete their tasks, system passes verification checklist, commits pushed to `main`.
+### Paso 1 — El operador define el objetivo y la incidencia raíz
+- Crear **Goal**: *"Ciclo de vida del aval bancario (Create → Issue → Amend)"*.
+- Crear **Issue raíz** colgando del goal con el requisito en lenguaje de negocio (la frase de §1).
+- Asignar la raíz a **nova-architect**.
+- **Señalar**: cómo el ticket muestra la *goal ancestry* (el "por qué" viaja con la tarea).
+
+### Paso 2 — El architect despierta (heartbeat) y descompone
+- En su heartbeat, `nova-architect` hace checkout atómico de la raíz, **revisa el board para no duplicar**, decide el mínimo viable (1 API + 1 frontal) y crea **≤5 sub-tareas**:
+  1. **Bootstrap repo** → `nova-repo-provisioner`
+  2. **API del aval** (entidad, estados, endpoints, seed) → `nova-service-gen`
+  3. **Frontal del aval** (lista, detalle, formularios, enmienda) → `nova-frontend-gen` · *blocked by* #2
+  4. **Contrato + Swagger + CORS** → `nova-api-integr` · *blocked by* #2
+  5. **Dockerización + gate de validación** → `nova-release-mgr` · *blocked by* #2,#3,#4
+- **Señalar**: el árbol padre→hijos, las **dependencias de bloqueo**, y que **no** se generó una cascada de 9 tickets (gobernanza de modo demo en acción).
+
+### Paso 3 — Los agentes ejecutan por heartbeat, en paralelo donde se puede
+- `nova-repo-provisioner` prepara el repo (skill `nova-repo-bootstrap`) → desbloquea al resto.
+- `nova-service-gen` genera la API con NOVA CLI (`nova create-service` tipo API, `nova generate-api-code`), implementa la **máquina de estados** y datos seed; aplica el gate `nova-post-gen-validation`.
+- En cuanto la API existe, `nova-frontend-gen` y `nova-api-integr` arrancan **en paralelo** (sus bloqueos se levantan).
+- **Señalar**: checkout atómico (nadie pisa a nadie), coste creciendo por agente/modelo, agentes consultando **memoria** ("¿cómo casamos los DTO con el front?").
+
+### Paso 4 — Approval gate: emitir el aval y mergear
+- La transición **DRAFT → ISSUED** y el **merge a `main`** están bajo política de aprobación.
+- El operador revisa el work product (Swagger + capturas de UI) y **aprueba** (o rechaza, con rollback).
+- **Señalar**: la cola de aprobaciones; nada llega a `main` sin firma; decisión registrada en el audit log.
+
+### Paso 5 — Verificación y cierre
+- `nova-release-mgr` aporta `docker-compose.local.yml`; el operador hace `docker compose up` y abre el **preview URL** del frontal.
+- Recorrido funcional (ver §6) y cada agente escribe **memorias** (`lesson`, `pattern`, `milestone`).
+- **Señalar**: coste total de la demo agregado por agente/goal; audit log completo de extremo a extremo.
 
 ---
 
-## References
+## 5. Mapa de agentes → trabajo (resumen)
 
-- **Backend API Spec**: REST endpoints defined above
-- **Frontend Models**: `Guarantee`, `Applicant`, `Beneficiary`, `IssuingBank` interfaces
-- **Database Schema**: H2 (in-memory) with tables: GUARANTEE, APPLICANT, BENEFICIARY, ISSUING_BANK, AMENDMENT, CLAIM
-- **Architecture**: Spring Boot 3.2.x + Angular 17 + Docker Compose
+```
+Goal: Ciclo de vida del aval
+└─ Issue raíz (nova-architect)               [governance: approval para ISSUED y merge]
+   ├─ #1 Bootstrap repo        → nova-repo-provisioner
+   ├─ #2 API del aval          → nova-service-gen        (skill: nova-post-gen-validation)
+   ├─ #3 Frontal del aval      → nova-frontend-gen        [blocked by #2]
+   ├─ #4 Contrato + Swagger    → nova-api-integr          [blocked by #2]
+   └─ #5 Docker + gate final   → nova-release-mgr         [blocked by #2,#3,#4]
+
+Standby (disponibles, no activados en modo demo):
+   · nova-async-comm   → eventos de ciclo de vida (ActiveMQ/SSE) si se quisiera notificación reactiva
+   · nova-ops-monitor  → run-local.sh + healthchecks si la demo necesitara observabilidad
+```
+
+---
+
+## 6. Entregables técnicos (qué produce la organización)
+
+El contenido de negocio sigue siendo el ciclo de vida del aval. Estos son los entregables que
+los agentes deben dejar funcionando; el detalle de campos/endpoints es el contrato que el
+**gate `nova-post-gen-validation`** verifica antes de cualquier push.
+
+### Backend — `nova-service-gen`
+- Entidad `Guarantee` (`reference` UNIQUE, `type`, `amount`, `currency`, `issueDate`, `expiryDate`, `status`, FKs a `Applicant`/`Beneficiary`/`IssuingBank`) + entidades `Amendment` y `Claim`.
+- Enums `GuaranteeStatus` (DRAFT, ISSUED, AMENDED, CLAIMED, EXPIRED, CANCELLED) y `GuaranteeType` (PERFORMANCE, ADVANCE_PAYMENT, BID_BOND, WARRANTY).
+- Endpoints REST `/api/v1/guarantees`: `GET` (lista + filtros `?status=&type=`), `GET /{id}`, `POST` (auto-DRAFT), `PUT /{id}`, `DELETE /{id}` (solo DRAFT), `POST /{id}/issue` (DRAFT→ISSUED), `POST /{id}/amendments` (→AMENDED).
+- **Máquina de estados**: solo ISSUED puede enmendarse/reclamarse; máx. 3 enmiendas; validar `amount>0`, `expiryDate>issueDate`, partes no nulas; 400/404 según corresponda.
+- `DataSeeder` con 6 avales en estados variados + 3 applicants/beneficiaries/issuingBanks.
+- DTOs con nombres EXACTOS del contrato (`reference`, `issueDate`, `expiryDate`; objetos anidados, no IDs).
+
+### Frontend — `nova-frontend-gen`
+- **Lista**: tabla (reference, type, amount, currency, status, fechas), badges por estado/tipo, orden, paginación, filtros multiselección, click→detalle.
+- **Detalle**: pestañas General / Amendments / Claims; botones *Issue* (solo DRAFT), *Edit* (solo DRAFT), *Delete* (solo DRAFT).
+- **Formulario** crear/editar con validación (`amount>0`, `expiryDate>issueDate`) → `POST`/`PUT`.
+- **Diálogo de enmienda** (description, newAmount, newExpiryDate) → `POST /{id}/amendments` + refresco.
+- Angular Material (tema indigo-pink), responsive, `GuaranteeService` con `HttpClient`.
+
+### Integración — `nova-api-integr`
+- Swagger/OpenAPI 3.0 (`/swagger-ui.html`, `/v3/api-docs`) con parámetros, bodies, respuestas y ejemplos (`BG-2026-001`, `EUR`, `50000`).
+- Validación de contrato campo a campo (nombres exactos, objetos anidados, enums como string).
+- CORS (4200→8080), errores consistentes (`{error, status}`: 400/404/409).
+
+### Release — `nova-release-mgr`
+- `Dockerfile` + `docker-compose.local.yml`; aplica el **gate de validación post-generación** como verificación final antes de habilitar el merge.
+
+---
+
+## 7. Guion de presentación (puntos de conversación)
+
+1. **"Esto parece un gestor de tareas"** → y por debajo hay org chart, presupuestos y gobernanza.
+2. **Un objetivo, no nueve tickets** → enseñar la descomposición automática del architect.
+3. **Heartbeats vs. babysitting** → nadie lanza agentes a mano; despiertan solos y se coordinan.
+4. **Checkout atómico** → por qué nunca hay doble trabajo ni contexto perdido entre reinicios.
+5. **Approval gate** → la emisión del aval y el merge requieren firma humana; rollback disponible.
+6. **Coste en vivo** → presupuesto por agente; auto-pausa al agotarse (sin sustos de tokens).
+7. **Memoria compartida** → el equipo "aprende" entre demos (lecciones de contrato DTO, Jakarta/javax…).
+8. **Bring your own agent** → Claude Code + Codex + Antigravity bajo un mismo org chart.
+9. **Auditoría** → recorrer el activity log de extremo a extremo: todo está explicado y trazado.
+
+---
+
+## 8. Checklist de verificación
+
+**Orquestación (Paperclip)**
+- [ ] El objetivo y la incidencia raíz existen; las sub-tareas heredan goal ancestry.
+- [ ] El architect creó **≤5 sub-tareas** con dependencias de bloqueo correctas (sin cascada).
+- [ ] Cada tarea tuvo **un único** asignado (checkout atómico) y log de actividad.
+- [ ] La transición ISSUED y el merge pasaron por **approval gate**.
+- [ ] Coste por agente/goal visible; ningún agente superó su presupuesto sin auto-pausa.
+- [ ] Hay **work products** adjuntos (Swagger, capturas UI, docker-compose).
+- [ ] Cada agente escribió al menos una **memoria** (`lesson`/`pattern`/`decision`).
+
+**Funcional (la demo arranca y se opera)**
+- [ ] `docker compose up` levanta backend + frontend sin errores.
+- [ ] La lista carga 6 avales seed; crear uno nuevo → aparece en la lista.
+- [ ] *Issue* cambia DRAFT→ISSUED; enmienda cambia ISSUED→AMENDED.
+- [ ] Filtro `status=AMENDED` devuelve solo el enmendado; borrar un AMENDED → error controlado.
+- [ ] Swagger UI muestra todos los endpoints; el frontal consume sin errores de contrato.
+
+---
+
+## 9. Definition of Done (Demo 1)
+
+La demo está lista cuando, **desde un único objetivo en el tablero**, la organización NOVA
+entrega el ciclo de vida del aval funcionando (`docker compose up`), con la emisión y el merge
+**aprobados por el operador**, coste dentro de presupuesto, work products adjuntos, memorias
+escritas y el **audit log completo** que explica quién hizo qué, cuándo y por qué.
+
+---
+
+## 10. Referencias
+
+- **Org / agentes NOVA**: `QPaperClip/containers/nova-org/company/` (`COMPANY.md`, `.paperclip.yaml`, `agents/*/AGENTS.md`)
+- **Skills NOVA**: `skills/nova-cli-commands`, `nova-post-gen-validation`, `nova-repo-bootstrap`
+- **Capacidades Paperclip**: org chart, heartbeats, checkout atómico, approvals, budgets, memoria, routines, work products, audit (ver `QPaperClip/README.md` y `doc/GOAL.md`)
+- **Stack NOVA**: Spring Boot 2.7.x + Angular 12+/Thin3 + Docker; NOVA CLI 7.8.0
+- **Normativa de negocio**: ICC URDG 758 (avales a primer requerimiento)
+```
