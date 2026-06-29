@@ -210,6 +210,5 @@ escritas y el **audit log completo** que explica quién hizo qué, cuándo y por
 - **Org / agentes NOVA**: `QPaperClip/containers/nova-org/company/` (`COMPANY.md`, `.paperclip.yaml`, `agents/*/AGENTS.md`)
 - **Skills NOVA**: `skills/nova-cli-commands`, `nova-post-gen-validation`, `nova-repo-bootstrap`
 - **Capacidades Paperclip**: org chart, heartbeats, checkout atómico, approvals, budgets, memoria, routines, work products, audit (ver `QPaperClip/README.md` y `doc/GOAL.md`)
-- **Stack NOVA**: Spring Boot 2.7.x + Angular 12+/Thin3 + Docker; NOVA CLI 7.8.0
+- **Stack del repo CasoUsoNova**: Spring Boot 3.2.x (Java 17, namespace `jakarta.*`) + Angular 17 (Angular Material) + Docker — el toolchain NOVA (CLI 7.8.0) describe un stack de referencia 2.7.x/Angular 12; esta demo se ejecuta sobre el stack real del repo
 - **Normativa de negocio**: ICC URDG 758 (avales a primer requerimiento)
-```
