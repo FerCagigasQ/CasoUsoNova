@@ -8,8 +8,9 @@
 $ErrorActionPreference = "Stop"
 
 $NOVA_VERSION = "7.8.0"
-$NOVA_RELEASE_BASE = "https://github.com/FerCagigasQ/CasoUsoNova/releases/download/nova-toolchain-v$NOVA_VERSION"
-$NOVA_ZIP_URL = "$NOVA_RELEASE_BASE/nova-le-$NOVA_VERSION-windows.zip"
+$NOVA_RELEASE_API = "https://api.github.com/repos/FerCagigasQ/CasoUsoNova/releases/tags/nova-toolchain-v$NOVA_VERSION"
+$NOVA_RELEASE_PAGE = "https://github.com/FerCagigasQ/CasoUsoNova/releases/tag/nova-toolchain-v$NOVA_VERSION"
+$NOVA_ZIP_NAME = "nova-le-$NOVA_VERSION-windows.zip"
 $ZULU_JDK_URL = "https://cdn.azul.com/zulu/bin/zulu11.74.15-ca-jdk11.0.24-win_x64.zip"
 $MAVEN_URL = "https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.zip"
 
@@ -68,13 +69,17 @@ if ($existingNovaCli -and (Test-Path $existingNovaCli)) {
         New-Item -ItemType Directory -Force -Path (Join-Path $NOVA_DIR "tools\maven") | Out-Null
 
         try {
-            $null = Invoke-WebRequest -Uri $NOVA_ZIP_URL -Method Head -UseBasicParsing
+            $release = Invoke-RestMethod -Uri $NOVA_RELEASE_API -UseBasicParsing
+            $asset = $release.assets | Where-Object { $_.name -eq $NOVA_ZIP_NAME } | Select-Object -First 1
+            if (-not $asset) {
+                throw "Asset $NOVA_ZIP_NAME is not available in $NOVA_RELEASE_PAGE"
+            }
             Write-Host "[NOVA]   Downloading nova-cli toolchain (Windows)..." -ForegroundColor DarkGray
-            Download-And-Extract -Url $NOVA_ZIP_URL -Dest $NOVA_DIR -StripComponents 1
+            Download-And-Extract -Url $asset.browser_download_url -Dest $NOVA_DIR -StripComponents 1
         } catch {
             Write-Host "[NOVA]   nova-cli zip not yet in release - skipping nova-cli install." -ForegroundColor Yellow
-            Write-Host "[NOVA]   Upload nova-le-$NOVA_VERSION-windows.zip to:" -ForegroundColor Yellow
-            Write-Host "[NOVA]   https://github.com/FerCagigasQ/CasoUsoNova/releases/tag/nova-toolchain-v$NOVA_VERSION" -ForegroundColor Yellow
+            Write-Host "[NOVA]   Upload $NOVA_ZIP_NAME to:" -ForegroundColor Yellow
+            Write-Host "[NOVA]   $NOVA_RELEASE_PAGE" -ForegroundColor Yellow
         }
 
         if (-not (Test-Path (Join-Path $NOVA_DIR "tools\java\bin\java.exe"))) {

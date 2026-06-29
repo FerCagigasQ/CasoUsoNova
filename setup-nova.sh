@@ -17,8 +17,9 @@ _nova_restore_opts() { eval "$_nova_old_opts"; unset _nova_old_opts; unset -f _n
 trap _nova_restore_opts RETURN 2>/dev/null || true
 
 NOVA_VERSION="7.8.0"
-NOVA_RELEASE_BASE="https://github.com/FerCagigasQ/CasoUsoNova/releases/download/nova-toolchain-v${NOVA_VERSION}"
-NOVA_TARBALL_URL="${NOVA_RELEASE_BASE}/nova-toolchain-v${NOVA_VERSION}.tar.gz"
+NOVA_RELEASE_API="https://api.github.com/repos/FerCagigasQ/CasoUsoNova/releases/tags/nova-toolchain-v${NOVA_VERSION}"
+NOVA_RELEASE_PAGE="https://github.com/FerCagigasQ/CasoUsoNova/releases/tag/nova-toolchain-v${NOVA_VERSION}"
+NOVA_TARBALL_NAME="nova-toolchain-v${NOVA_VERSION}.tar.gz"
 ZULU_JDK_URL="https://cdn.azul.com/zulu/bin/zulu11.74.15-ca-jdk11.0.24-linux_x64.tar.gz"
 MAVEN_URL="https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz"
 
@@ -39,14 +40,15 @@ else
     mkdir -p "${NOVA_DIR}" "${NOVA_DIR}/tools/java" "${NOVA_DIR}/tools/maven"
 
     # Try to download nova-cli from GitHub Release
-    if curl -fsSL --head "${NOVA_TARBALL_URL}" >/dev/null 2>&1; then
+    NOVA_TARBALL_URL="$(curl -fsSL "${NOVA_RELEASE_API}" | grep -o "\"browser_download_url\": \"[^\"]*${NOVA_TARBALL_NAME}\"" | sed -E 's/.*"([^"]+)"/\1/' | head -n 1 || true)"
+    if [ -n "${NOVA_TARBALL_URL}" ]; then
       echo "[NOVA]   Downloading nova-cli toolchain..."
       curl -fsSL "${NOVA_TARBALL_URL}" | tar -xz -C "${NOVA_DIR}" --strip-components=4
       chmod +x "${NOVA_DIR}/nova-cli/bin/"*.js 2>/dev/null || true
     else
       echo "[NOVA]   nova-cli tarball not yet in release — skipping nova-cli install."
-      echo "[NOVA]   To install nova-cli, upload nova-toolchain-v${NOVA_VERSION}.tar.gz to:"
-      echo "[NOVA]   https://github.com/FerCagigasQ/CasoUsoNova/releases/tag/nova-toolchain-v${NOVA_VERSION}"
+      echo "[NOVA]   To install nova-cli, upload ${NOVA_TARBALL_NAME} to:"
+      echo "[NOVA]   ${NOVA_RELEASE_PAGE}"
     fi
 
     # Always download Zulu JDK 11 (public CDN)
