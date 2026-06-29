@@ -1,0 +1,122 @@
+<div class="dashboard-container">
+
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Loading metrics…</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !loading" class="empty-state">
+    <mat-icon class="empty-icon">error_outline</mat-icon>
+    <p>Could not load metrics. Please try again later.</p>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && !error && metrics?.total === 0" class="empty-state">
+    <mat-icon class="empty-icon">bar_chart</mat-icon>
+    <p>No data available. Create a guarantee to see the dashboard.</p>
+  </div>
+
+  <!-- Dashboard content -->
+  <ng-container *ngIf="!loading && !error && metrics && metrics.total > 0">
+
+    <!-- KPI Cards -->
+    <section class="kpi-section">
+      <h2 class="section-title">Key Performance Indicators</h2>
+      <div class="kpi-grid">
+
+        <mat-card class="kpi-card kpi-total">
+          <mat-card-content>
+            <div class="kpi-value">{{ metrics.total }}</div>
+            <div class="kpi-label">
+              <mat-icon>account_balance</mat-icon>
+              Total Guarantees
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card *ngFor="let entry of statusEntries" class="kpi-card">
+          <mat-card-content>
+            <div class="kpi-value" [style.color]="entry.color">{{ entry.value }}</div>
+            <div class="kpi-label">
+              <span class="status-dot" [style.background]="entry.color"></span>
+              {{ formatStatusLabel(entry.key) }}
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </section>
+
+    <!-- Bar Chart: By Month -->
+    <section class="chart-section">
+      <h2 class="section-title">Guarantees by Month</h2>
+      <mat-card class="chart-card">
+        <mat-card-content>
+          <div class="bar-chart" *ngIf="metrics.byMonth.length > 0; else noMonthData">
+            <div class="bar-wrapper" *ngFor="let m of metrics.byMonth">
+              <div class="bar-col">
+                <div class="bar-count">{{ m.count }}</div>
+                <div class="bar" [style.height.%]="barHeightPercent(m.count)"></div>
+              </div>
+              <div class="bar-label">{{ m.month }}</div>
+            </div>
+          </div>
+          <ng-template #noMonthData>
+            <p class="no-data-msg">No monthly data available.</p>
+          </ng-template>
+        </mat-card-content>
+      </mat-card>
+    </section>
+
+    <!-- Donut Charts: By Status + By Type -->
+    <section class="chart-section">
+      <h2 class="section-title">Distribution</h2>
+      <div class="donut-grid">
+
+        <mat-card class="chart-card">
+          <mat-card-content>
+            <h3 class="chart-subtitle">By Status</h3>
+            <div class="donut-container">
+              <svg viewBox="0 0 100 100" class="donut-svg">
+                <path *ngFor="let seg of statusSegments"
+                      [attr.d]="seg.path"
+                      [attr.fill]="seg.color"
+                      stroke="white" stroke-width="1"/>
+              </svg>
+              <div class="donut-legend">
+                <div *ngFor="let e of statusEntries" class="legend-item">
+                  <span class="legend-dot" [style.background]="e.color"></span>
+                  <span class="legend-label">{{ formatStatusLabel(e.key) }}: <strong>{{ e.value }}</strong></span>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="chart-card">
+          <mat-card-content>
+            <h3 class="chart-subtitle">By Type</h3>
+            <div class="donut-container">
+              <svg viewBox="0 0 100 100" class="donut-svg">
+                <path *ngFor="let seg of typeSegments"
+                      [attr.d]="seg.path"
+                      [attr.fill]="seg.color"
+                      stroke="white" stroke-width="1"/>
+              </svg>
+              <div class="donut-legend">
+                <div *ngFor="let e of typeEntries" class="legend-item">
+                  <span class="legend-dot" [style.background]="e.color"></span>
+                  <span class="legend-label">{{ formatStatusLabel(e.key) }}: <strong>{{ e.value }}</strong></span>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </section>
+
+  </ng-container>
+</div>

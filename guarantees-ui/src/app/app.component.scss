@@ -3,3 +3,11 @@
   font-size: 18px;
   font-weight: 500;
 }
+
+.spacer {
+  flex: 1;
+}
+
+::ng-deep .nav-active {
+  background: rgba(255, 255, 255, 0.15) !important;
+}

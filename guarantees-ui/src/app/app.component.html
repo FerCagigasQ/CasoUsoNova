@@ -2,7 +2,10 @@
   <mat-icon>account_balance</mat-icon>
   <span class="toolbar-title">Bank Guarantees — Trade Finance</span>
   <span class="spacer"></span>
-  <button mat-button routerLink="/guarantees">
+  <button mat-button routerLink="/dashboard" routerLinkActive="nav-active">
+    <mat-icon>dashboard</mat-icon> Dashboard
+  </button>
+  <button mat-button routerLink="/guarantees" routerLinkActive="nav-active">
     <mat-icon>list</mat-icon> Guarantees
   </button>
   <button mat-raised-button color="accent" [routerLink]="['/guarantees/new']">
