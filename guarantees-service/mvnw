@@ -1,0 +1,15 @@
+#!/bin/sh
+# Licensed to the Apache Software Foundation (ASF)
+# https://www.apache.org/licenses/LICENSE-2.0
+
+set -e
+
+PRG="$0"
+MVNW_HOME="$(dirname "$PRG")"
+
+if [ -f "$MVNW_HOME/.mvn/wrapper/maven-wrapper.jar" ]; then
+    exec java -cp "$MVNW_HOME/.mvn/wrapper/maven-wrapper.jar" org.apache.maven.wrapper.MavenWrapperMain "$@"
+else
+    echo "Error: Maven wrapper JAR not found. Please run setup."
+    exit 1
+fi
