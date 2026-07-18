@@ -4,7 +4,7 @@
 **Duración estimada**: 45-60 minutos (algo menos que la demo del dashboard)
 **Complejidad**: Avanzado
 **Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
-**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): nova-repo-provisioner, nova-service-gen, nova-frontend-gen, nova-api-integr, nova-async-comm, nova-ops-monitor, nova-release-mgr
+**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): Repo Provisioner (nova-repo-provisioner), Backend Service Generator (nova-service-gen), Frontend Generator (nova-frontend-gen), API Integration Expert (nova-api-integr), Async Communication Expert (nova-async-comm), Operations Monitor (nova-ops-monitor), Release Manager (nova-release-mgr)
 
 > Demo de desarrollo sobre la plataforma ya entregada (dashboard v2 con SSE y observabilidad **ya en
 > `main`**). El resultado es un **efecto muy visible en la UI**: botón "Exportar" con menú CSV/Excel,
@@ -102,16 +102,19 @@ back, un mini-flujo de jobs, contrato OpenAPI, evento SSE y métricas.
 > El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone con delegación
 > máxima** y crea **una sub-incidencia por cada agente** de la org **NOVA** (`QPaperClip/containers/nova-org`),
 > con dependencias entre ellas. No es un reparto hecho a mano por el operador, y **ningún agente queda en standby**.
+> La org dispone de agentes reales para cada especialidad — Repo Provisioner, Backend Service Generator,
+> Frontend Generator, API Integration Expert, Async Communication Expert, Operations Monitor y Release
+> Manager — así que **anímate a delegar**: cada pieza va al especialista que le corresponde.
 
 | # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
 |---|----------------------------------------|-----------------|---------|------------|
-| 1 | Añadir Apache POI al `pom.xml` (versión fijada) y verificar el build Maven. | **nova-repo-provisioner** | Claude Code | — |
-| 2 | Job asíncrono de exportación (`POST` 202 + `GET` estado/binario) reutilizando filtros y DTOs. Tests. | **nova-service-gen** | Codex | #1 |
-| 3 | Botón/menú de exportación, CSV en cliente, flujo de job con progreso y descarga. Tests front. | **nova-frontend-gen** | Antigravity | #2 |
-| 4 | Documentar el flujo de exportación en OpenAPI y revalidar CORS. | **nova-api-integr** | Antigravity | #2 |
-| 5 | Emitir `export-ready` por SSE al terminar el job y consumirlo en la UI (notificación + descarga). | **nova-async-comm** | Codex | #2, #3 |
-| 6 | Métricas Micrometer de jobs de exportación (contador + timer) en Prometheus. | **nova-ops-monitor** | Codex | #2 |
-| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Codex | #3, #4, #5, #6 |
+| 1 | Añadir Apache POI al `pom.xml` (versión fijada) y verificar el build Maven. | **nova-repo-provisioner** | Claude Code (local) | — |
+| 2 | Job asíncrono de exportación (`POST` 202 + `GET` estado/binario) reutilizando filtros y DTOs. Tests. | **nova-service-gen** | Codex (local) | #1 |
+| 3 | Botón/menú de exportación, CSV en cliente, flujo de job con progreso y descarga. Tests front. | **nova-frontend-gen** | Claude Code (local) | #2 |
+| 4 | Documentar el flujo de exportación en OpenAPI y revalidar CORS. | **nova-api-integr** | Claude Code (local) | #2 |
+| 5 | Emitir `export-ready` por SSE al terminar el job y consumirlo en la UI (notificación + descarga). | **nova-async-comm** | Claude Code (local) | #2, #3 |
+| 6 | Métricas Micrometer de jobs de exportación (contador + timer) en Prometheus. | **nova-ops-monitor** | Claude Code (local) | #2 |
+| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Claude Code (local) | #3, #4, #5, #6 |
 
 > **Delegación máxima**: los 7 agentes ejecutores trabajan; `nova-architect` coordina, fija los contratos
 > y aprueba. Ningún agente queda en standby.

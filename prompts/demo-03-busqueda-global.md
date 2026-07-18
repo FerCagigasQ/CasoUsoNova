@@ -4,7 +4,7 @@
 **Duración estimada**: 45-60 minutos (algo menos que la demo del dashboard)
 **Complejidad**: Avanzado
 **Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
-**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): nova-repo-provisioner, nova-service-gen, nova-frontend-gen, nova-api-integr, nova-async-comm, nova-ops-monitor, nova-release-mgr
+**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): Repo Provisioner (nova-repo-provisioner), Backend Service Generator (nova-service-gen), Frontend Generator (nova-frontend-gen), API Integration Expert (nova-api-integr), Async Communication Expert (nova-async-comm), Operations Monitor (nova-ops-monitor), Release Manager (nova-release-mgr)
 
 > Demo de desarrollo sobre la plataforma ya entregada (dashboard v2 con SSE y observabilidad **ya en
 > `main`**). El resultado es un **efecto muy visible en la UI**: overlay `Ctrl/Cmd + K` estilo
@@ -102,16 +102,19 @@ teclado y navegar → reabrir la paleta y, desde otra pestaña, crear un aval co
 > El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone con delegación
 > máxima** y crea **una sub-incidencia por cada agente** de la org **NOVA** (`QPaperClip/containers/nova-org`),
 > con dependencias entre ellas. No es un reparto hecho a mano por el operador, y **ningún agente queda en standby**.
+> La org dispone de agentes reales para cada especialidad — Repo Provisioner, Backend Service Generator,
+> Frontend Generator, API Integration Expert, Async Communication Expert, Operations Monitor y Release
+> Manager — así que **anímate a delegar**: cada pieza va al especialista que le corresponde.
 
 | # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
 |---|----------------------------------------|-----------------|---------|------------|
-| 1 | Verificar toolchain CDK Overlay/Dialog (versiones fijadas + lockfile) y que el build resuelve. | **nova-repo-provisioner** | Claude Code | — |
-| 2 | Endpoint `GET /api/v1/search` (texto, límite, relevancia simple). Tests de integración. | **nova-service-gen** | Codex | — |
-| 3 | Overlay, atajo global, debounce, grupos de resultados, navegación por teclado y accesibilidad. Tests front. | **nova-frontend-gen** | Antigravity | #1, #2 |
-| 4 | Documentar el endpoint en OpenAPI y revalidar CORS. | **nova-api-integr** | Antigravity | #2 |
-| 5 | Refresco en vivo de la búsqueda activa consumiendo los eventos SSE de aval. | **nova-async-comm** | Codex | #2, #3 |
-| 6 | Métricas Micrometer del endpoint de búsqueda (contador + latencia) en Prometheus. | **nova-ops-monitor** | Codex | #2 |
-| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Codex | #3, #4, #5, #6 |
+| 1 | Verificar toolchain CDK Overlay/Dialog (versiones fijadas + lockfile) y que el build resuelve. | **nova-repo-provisioner** | Claude Code (local) | — |
+| 2 | Endpoint `GET /api/v1/search` (texto, límite, relevancia simple). Tests de integración. | **nova-service-gen** | Codex (local) | — |
+| 3 | Overlay, atajo global, debounce, grupos de resultados, navegación por teclado y accesibilidad. Tests front. | **nova-frontend-gen** | Claude Code (local) | #1, #2 |
+| 4 | Documentar el endpoint en OpenAPI y revalidar CORS. | **nova-api-integr** | Claude Code (local) | #2 |
+| 5 | Refresco en vivo de la búsqueda activa consumiendo los eventos SSE de aval. | **nova-async-comm** | Claude Code (local) | #2, #3 |
+| 6 | Métricas Micrometer del endpoint de búsqueda (contador + latencia) en Prometheus. | **nova-ops-monitor** | Claude Code (local) | #2 |
+| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Claude Code (local) | #3, #4, #5, #6 |
 
 > **Delegación máxima**: los 7 agentes ejecutores trabajan; `nova-architect` coordina, fija los contratos
 > y aprueba. Ningún agente queda en standby.
