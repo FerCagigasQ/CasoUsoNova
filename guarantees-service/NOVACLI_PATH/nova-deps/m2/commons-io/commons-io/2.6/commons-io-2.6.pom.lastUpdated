@@ -1,0 +1,7 @@
+#NOTE: This is an Aether internal implementation file, its format can be changed without prior notice.
+#Sun Jul 19 01:06:24 CEST 2026
+df839e4fce7f316abe5eabc356ee8821b90fc53b@default-snapshots-http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_PLUGIN_VIRTUAL_REPO/.lastUpdated=1784415983979
+https\://repo.maven.apache.org/maven2/.lastUpdated=1784415984065
+http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_PLUGIN_VIRTUAL_REPO/.error=Could not transfer artifact commons-io\:commons-io\:pom\:2.6 from/to snapshots (http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_PLUGIN_VIRTUAL_REPO)\: cibartifactory.igrupobbva
+df839e4fce7f316abe5eabc356ee8821b90fc53b@default-release-http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_PLUGIN_VIRTUAL_REPO/.lastUpdated=1784415983964
+http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_PLUGIN_VIRTUAL_REPO/.error=Could not transfer artifact commons-io\:commons-io\:pom\:2.6 from/to release (http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_PLUGIN_VIRTUAL_REPO)\: cibartifactory.igrupobbva

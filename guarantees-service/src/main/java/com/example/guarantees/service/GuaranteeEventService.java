@@ -54,6 +54,23 @@ public class GuaranteeEventService {
         emitters.forEach(emitter -> send(emitter, event));
     }
 
+    public void publishEvent(String eventName, String eventType, java.util.Map<String, String> data) {
+        log.info("Publishing event type={} name={}", eventType, eventName);
+        emitters.forEach(emitter -> {
+            try {
+                emitter.send(SseEmitter.event()
+                        .id(UUID.randomUUID().toString())
+                        .name(eventName)
+                        .data(new java.util.HashMap<String, Object>() {{
+                            put("eventType", eventType);
+                            putAll(data);
+                        }}, MediaType.APPLICATION_JSON));
+            } catch (IOException | IllegalStateException e) {
+                emitters.remove(emitter);
+            }
+        });
+    }
+
     private void send(SseEmitter emitter, GuaranteeChangeEventDTO event) {
         try {
             emitter.send(SseEmitter.event()

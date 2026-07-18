@@ -2,6 +2,23 @@
   <mat-card-header>
     <mat-card-title>Bank Guarantees (URDG 758)</mat-card-title>
     <mat-card-subtitle>{{ guarantees.length }} guarantee(s) found</mat-card-subtitle>
+    <div class="header-actions">
+      <button mat-stroked-button [matMenuTriggerFor]="exportMenu" [disabled]="exportingExcel">
+        <mat-icon>download</mat-icon>
+        {{ exportingExcel ? 'Generando...' : 'Exportar' }}
+        @if (exportingExcel) {
+          <mat-spinner diameter="16" style="display:inline-block"></mat-spinner>
+        }
+      </button>
+      <mat-menu #exportMenu="matMenu">
+        <button mat-menu-item (click)="exportCSV()">
+          <mat-icon>table_chart</mat-icon> CSV (inmediato)
+        </button>
+        <button mat-menu-item (click)="exportExcel()">
+          <mat-icon>description</mat-icon> Excel (asíncrono)
+        </button>
+      </mat-menu>
+    </div>
   </mat-card-header>
 
   <mat-card-content>
