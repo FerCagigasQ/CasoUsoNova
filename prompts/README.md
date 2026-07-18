@@ -24,11 +24,14 @@ y al final de una demo.
 | # | PRD | Estado | Complejidad | Efecto en UI (inicial → final) | Agentes principales |
 |---|-----|--------|-------------|--------------------------------|---------------------|
 | 1 | [Tema oscuro / claro con preferencias y sync en vivo](./demo-01-tema-oscuro.md) | Pendiente (~45-60 min) | Avanzado | Tema claro fijo → conmutador que oscurece toda la UI, persiste en backend y sincroniza pestañas en vivo | toda la org NOVA |
-| 2 | [Exportación CSV / Excel asíncrona con aviso en vivo](./demo-02-exportacion-datos.md) | Pendiente (~45-60 min) | Avanzado | Sin exportación → CSV instantáneo y Excel por job asíncrono con notificación SSE y descarga | toda la org NOVA |
+| 2 | [Exportación CSV / Excel asíncrona con aviso en vivo](./demo-02-exportacion-datos.md) | ✔ Implementada (en `main`) | Avanzado | Sin exportación → CSV instantáneo y Excel por job asíncrono con notificación SSE y descarga | toda la org NOVA |
 | 3 | [Búsqueda global + paleta de comandos con resultados en vivo](./demo-03-busqueda-global.md) | Pendiente (~45-60 min) | Avanzado | Sin buscador → overlay `Ctrl/Cmd+K` que busca, navega y se refresca en vivo | toda la org NOVA |
 | 4 | [Dashboard de KPIs con gráficas](./demo-04-dashboard-kpis.md) | ✔ Implementada (v1 y v2 en `main`) | Intermedio-Avanzado | Solo tabla → vista `/dashboard` con tarjetas y charts | toda la org NOVA |
 | 5 | [Internacionalización ES/EN full-stack](./demo-05-internacionalizacion.md) | Pendiente (~45-60 min) | Avanzado | UI en un idioma → selector que traduce al vuelo (incl. errores del backend), persiste y sincroniza pestañas | toda la org NOVA |
-| 6 | [Tablero Kanban con drag & drop en vivo](./demo-06-tablero-kanban.md) | Nueva (~45 min) | Avanzado | Tabla plana → tablero `/board` interactivo, sincronizado en vivo entre pestañas | toda la org NOVA |
+| 6 | [Tablero Kanban con drag & drop en vivo](./demo-06-tablero-kanban.md) | Pendiente (~45 min) | Avanzado | Tabla plana → tablero `/board` interactivo, sincronizado en vivo entre pestañas | toda la org NOVA |
+| 7 | [Timeline de auditoría con diffs visuales](./demo-07-timeline-auditoria.md) | Nueva (~50-60 min) | Avanzado+ | Sin historial → pestaña "Historial" con timeline, diffs campo a campo antes→después y eventos que entran solos animados | toda la org NOVA |
+| 8 | [Centro de notificaciones con reglas configurables](./demo-08-centro-notificaciones.md) | Nueva (~50-60 min) | Avanzado+ | Eventos silenciosos → campana con badge animado, panel por severidad, toasts en vivo y reglas cuyo efecto se ve al instante | toda la org NOVA |
+| 9 | [Calendario de vencimientos con heatmap de riesgo](./demo-09-calendario-vencimientos.md) | Nueva (~50-60 min) | Avanzado+ | Fechas planas en la tabla → heatmap mensual de riesgo, badges "vence en N días" y avales que expiran solos en pantalla | toda la org NOVA |
 
 ## Organización de agentes NOVA
 
@@ -82,4 +85,4 @@ docker compose up --build      # backend + frontend
 
 ---
 
-**Última actualización**: 2026-07-18
+**Última actualización**: 2026-07-18 (v2)
