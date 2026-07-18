@@ -1,0 +1,7 @@
+#NOTE: This is an Aether internal implementation file, its format can be changed without prior notice.
+#Sun Jul 19 01:06:03 CEST 2026
+https\://repo.maven.apache.org/maven2/.lastUpdated=1784415963416
+df839e4fce7f316abe5eabc356ee8821b90fc53b@default-snapshots-http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_NO_PLUGIN_VIRTUAL_REPO/.lastUpdated=1784415963330
+http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_NO_PLUGIN_VIRTUAL_REPO/.error=Could not transfer artifact com.sun.xml.bind.mvn\:jaxb-parent\:pom\:4.0.4 from/to snapshots (http\://cibartifactory.igrupobbva\:8084/artifactory/SNAPSHOT_NO_PLUGIN_VIRTUAL_REPO)\: cibartifactory.igrupobbva
+http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_NO_PLUGIN_VIRTUAL_REPO/.error=Could not transfer artifact com.sun.xml.bind.mvn\:jaxb-parent\:pom\:4.0.4 from/to release (http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_NO_PLUGIN_VIRTUAL_REPO)\: cibartifactory.igrupobbva
+df839e4fce7f316abe5eabc356ee8821b90fc53b@default-release-http\://cibartifactory.igrupobbva\:8084/artifactory/RELEASE_NO_PLUGIN_VIRTUAL_REPO/.lastUpdated=1784415963316
