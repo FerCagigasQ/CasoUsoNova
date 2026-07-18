@@ -6,6 +6,13 @@ import com.example.guarantees.dto.ExportRequest;
 import com.example.guarantees.dto.ExportResponse;
 import com.example.guarantees.service.ExportJobStore;
 import com.example.guarantees.service.ExportService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -19,6 +26,7 @@ import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
+@Tag(name = "Export", description = "Async CSV/Excel export jobs for bank guarantees")
 @RestController
 @RequestMapping("/api/v1/guarantees/export")
 @CrossOrigin(origins = {"http://localhost:4200", "http://localhost"})
@@ -32,6 +40,13 @@ public class ExportController {
         this.jobStore = jobStore;
     }
 
+    @Operation(summary = "Start an async export job",
+               description = "Accepts format (xlsx or csv) and optional filters. Returns 202 with a jobId immediately.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "202", description = "Job accepted",
+                     content = @Content(schema = @Schema(implementation = ExportResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid format or filter value")
+    })
     @PostMapping
     public ResponseEntity<ExportResponse> startExport(@RequestBody ExportRequest request) {
         // Validate format
@@ -79,8 +94,16 @@ public class ExportController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
+    @Operation(summary = "Get export job status",
+               description = "Returns current job state. When status=completed, includes downloadUrl.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Job status",
+                     content = @Content(schema = @Schema(implementation = ExportResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Job not found")
+    })
     @GetMapping("/{jobId}")
-    public ResponseEntity<?> getExportStatus(@PathVariable String jobId) {
+    public ResponseEntity<?> getExportStatus(
+            @Parameter(description = "Job ID returned by the POST endpoint") @PathVariable String jobId) {
         if (!jobStore.exists(jobId)) {
             return ResponseEntity.notFound().build();
         }
@@ -104,8 +127,17 @@ public class ExportController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Download the generated file",
+               description = "Streams the xlsx or csv binary. Returns 409 if job is still processing.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "File binary (xlsx or csv)",
+                     content = @Content(mediaType = "application/octet-stream")),
+        @ApiResponse(responseCode = "404", description = "Job not found"),
+        @ApiResponse(responseCode = "409", description = "Job not yet completed")
+    })
     @GetMapping("/{jobId}/download")
-    public ResponseEntity<Resource> downloadExport(@PathVariable String jobId) {
+    public ResponseEntity<Resource> downloadExport(
+            @Parameter(description = "Job ID returned by the POST endpoint") @PathVariable String jobId) {
         if (!jobStore.exists(jobId)) {
             return ResponseEntity.notFound().build();
         }
