@@ -34,19 +34,22 @@ y al final de una demo.
 
 > Definidos en `QPaperClip/containers/nova-org/company/` (`COMPANY.md`, `.paperclip.yaml`, `agents/*/AGENTS.md`).
 
-| Agente | Rol | Adapter |
-|--------|-----|---------|
-| **nova-architect** | CTO — descomposición técnica, contratos de API, code review, aprobación | Claude Code |
-| **nova-repo-provisioner** | Bootstrap de repo y toolchain | Claude Code |
-| **nova-service-gen** | Backend (Spring Boot / Java) | Codex |
-| **nova-frontend-gen** | Frontend (Angular 17 + Material) | Antigravity |
-| **nova-api-integr** | Integración, OpenAPI/Swagger, CORS, contrato de error | Antigravity |
-| **nova-release-mgr** | Docker, release y gate de validación | Codex |
-| **nova-async-comm** | Eventos / notificaciones reactivas | Codex |
-| **nova-ops-monitor** | Observabilidad / healthchecks | Codex |
+| Agente | Nombre en el org chart | Rol | Adapter |
+|--------|------------------------|-----|---------|
+| **nova-architect** | Arquitecto NOVA | Arquitecto Principal / CEO — descomposición técnica, contratos de API, code review, aprobación | Claude Code (local) |
+| **nova-repo-provisioner** | Repo Provisioner | DevOps / Configurador de Repositorios | Claude Code (local) |
+| **nova-service-gen** | Backend Service Generator | Backend Expert / Generador de Servicios (Spring Boot / Java) | Codex (local) |
+| **nova-frontend-gen** | Frontend Generator | Frontend Expert / Thin3 Specialist (Angular 17 + Material) | Claude Code (local) |
+| **nova-api-integr** | API Integration Expert | Integration Expert / API Gateway Specialist (OpenAPI/Swagger, CORS, contrato de error) | Claude Code (local) |
+| **nova-release-mgr** | Release Manager | Release & Deploy Expert (Docker, release y gate de validación) | Claude Code (local) |
+| **nova-async-comm** | Async Communication Expert | Messaging Expert / Async Specialist (eventos, notificaciones reactivas) | Claude Code (local) |
+| **nova-ops-monitor** | Operations Monitor | Operations Expert / Monitoring Specialist (observabilidad, healthchecks) | Claude Code (local) |
 
-Todos los PRDs pendientes están diseñados con **delegación máxima**: los 7 agentes ejecutores trabajan
-y **ningún agente queda en standby** (como en la demo del dashboard ya implementada).
+**Anímate a delegar**: la organización dispone de estos 8 agentes reales, listos para trabajar en
+paralelo. Todos los PRDs pendientes están diseñados con **delegación máxima**: el arquitecto debe
+apoyarse en los 7 agentes ejecutores — **ningún agente queda en standby** (como en la demo del
+dashboard ya implementada). Si una pieza encaja con la especialidad de un agente, se delega, no se
+hace desde otro rol.
 
 Cada PRD incluye una sección **Delegación que ejecuta `nova-architect`** con las sub-incidencias que
 el arquitecto crea y delega (una por agente, con sus dependencias) y el **flujo de ejecución**.

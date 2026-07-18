@@ -4,7 +4,7 @@
 **Duración estimada**: 45 minutos (algo menos que la demo del dashboard)
 **Complejidad**: Avanzado
 **Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
-**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): nova-repo-provisioner, nova-service-gen, nova-frontend-gen, nova-api-integr, nova-async-comm, nova-ops-monitor, nova-release-mgr
+**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): Repo Provisioner (nova-repo-provisioner), Backend Service Generator (nova-service-gen), Frontend Generator (nova-frontend-gen), API Integration Expert (nova-api-integr), Async Communication Expert (nova-async-comm), Operations Monitor (nova-ops-monitor), Release Manager (nova-release-mgr)
 
 > Demo de desarrollo sobre la plataforma ya entregada (tabla de avales, dashboard v2 con SSE y
 > observabilidad **ya en `main`**). Añade una vista **`/board`** tipo Kanban donde cada aval es una
@@ -108,16 +108,19 @@ abrir una segunda pestaña, mover una tarjeta y verla **moverse sola** en la otr
 > El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone con delegación
 > máxima** y crea **una sub-incidencia por cada agente** de la org **NOVA** (`QPaperClip/containers/nova-org`),
 > con dependencias entre ellas. No es un reparto hecho a mano por el operador, y **ningún agente queda en standby**.
+> La org dispone de agentes reales para cada especialidad — Repo Provisioner, Backend Service Generator,
+> Frontend Generator, API Integration Expert, Async Communication Expert, Operations Monitor y Release
+> Manager — así que **anímate a delegar**: cada pieza va al especialista que le corresponde.
 
 | # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
 |---|----------------------------------------|-----------------|---------|------------|
-| 1 | Verificar toolchain CDK drag-drop (versión fijada + lockfile) y que el build resuelve el módulo. | **nova-repo-provisioner** | Claude Code | — |
-| 2 | `PATCH /status` con validación de transiciones y `GET /board` agrupado por estado. Tests. | **nova-service-gen** | Codex | — |
-| 3 | Vista `/board` con columnas, tarjetas, drag & drop, revert en error y enlace de navegación. Tests front. | **nova-frontend-gen** | Antigravity | #1, #2 |
-| 4 | Documentar en OpenAPI el `PATCH` de estado y el endpoint `board`; revalidar CORS. | **nova-api-integr** | Antigravity | #2 |
-| 5 | Emitir el evento de cambio de estado por SSE y consumirlo en `/board` (sincronización entre pestañas). | **nova-async-comm** | Codex | #2, #3 |
-| 6 | Contador Micrometer de transiciones (`from`, `to`, `result`) expuesto en Prometheus. | **nova-ops-monitor** | Codex | #2 |
-| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Codex | #3, #4, #5, #6 |
+| 1 | Verificar toolchain CDK drag-drop (versión fijada + lockfile) y que el build resuelve el módulo. | **nova-repo-provisioner** | Claude Code (local) | — |
+| 2 | `PATCH /status` con validación de transiciones y `GET /board` agrupado por estado. Tests. | **nova-service-gen** | Codex (local) | — |
+| 3 | Vista `/board` con columnas, tarjetas, drag & drop, revert en error y enlace de navegación. Tests front. | **nova-frontend-gen** | Claude Code (local) | #1, #2 |
+| 4 | Documentar en OpenAPI el `PATCH` de estado y el endpoint `board`; revalidar CORS. | **nova-api-integr** | Claude Code (local) | #2 |
+| 5 | Emitir el evento de cambio de estado por SSE y consumirlo en `/board` (sincronización entre pestañas). | **nova-async-comm** | Claude Code (local) | #2, #3 |
+| 6 | Contador Micrometer de transiciones (`from`, `to`, `result`) expuesto en Prometheus. | **nova-ops-monitor** | Claude Code (local) | #2 |
+| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Claude Code (local) | #3, #4, #5, #6 |
 
 > **Delegación máxima**: los 7 agentes ejecutores trabajan; `nova-architect` coordina, fija los contratos
 > y aprueba. Ningún agente queda en standby.
