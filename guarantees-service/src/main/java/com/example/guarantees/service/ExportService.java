@@ -86,12 +86,11 @@ public class ExportService {
                     .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
 
             // Emit event for completion (for #5)
-            guaranteeEventService.publishEvent("guarantee-events", "export-ready",
-                new java.util.HashMap<String, String>() {{
-                    put("jobId", jobId);
-                    put("format", format);
-                    put("count", String.valueOf(guarantees.size()));
-                }});
+            java.util.Map<String, String> eventPayload = new java.util.HashMap<>();
+            eventPayload.put("jobId", jobId);
+            eventPayload.put("format", format);
+            eventPayload.put("count", String.valueOf(guarantees.size()));
+            guaranteeEventService.publishEvent("guarantee-events", "export-ready", eventPayload);
 
         } catch (Exception e) {
             jobStore.markFailed(jobId, e);
