@@ -21,13 +21,14 @@ y al final de una demo.
 
 ## Demos
 
-| # | PRD | Complejidad | Efecto en UI (inicial → final) | Agentes principales |
-|---|-----|-------------|--------------------------------|---------------------|
-| 1 | [Tema oscuro / claro](./demo-01-tema-oscuro.md) | Principiante | Sin control de tema → conmutador que cambia toda la UI y persiste | frontend-gen |
-| 2 | [Exportación a CSV / Excel](./demo-02-exportacion-datos.md) | Principiante-Intermedio | Sin exportación → botón que descarga las filas visibles | frontend-gen, service-gen |
-| 3 | [Búsqueda global + paleta de comandos](./demo-03-busqueda-global.md) | Intermedio | Sin buscador → overlay `Ctrl/Cmd+K` que busca y navega | frontend-gen, service-gen |
-| 4 | [Dashboard de KPIs con gráficas](./demo-04-dashboard-kpis.md) | Intermedio-Avanzado | Solo tabla → vista `/dashboard` con tarjetas y charts | service-gen, frontend-gen |
-| 5 | [Internacionalización ES/EN](./demo-05-internacionalizacion.md) | Intermedio | UI en un idioma → selector que traduce al vuelo y persiste | frontend-gen |
+| # | PRD | Estado | Complejidad | Efecto en UI (inicial → final) | Agentes principales |
+|---|-----|--------|-------------|--------------------------------|---------------------|
+| 1 | [Tema oscuro / claro](./demo-01-tema-oscuro.md) | Pendiente | Principiante | Sin control de tema → conmutador que cambia toda la UI y persiste | frontend-gen |
+| 2 | [Exportación a CSV / Excel](./demo-02-exportacion-datos.md) | Pendiente | Principiante-Intermedio | Sin exportación → botón que descarga las filas visibles | frontend-gen, service-gen |
+| 3 | [Búsqueda global + paleta de comandos](./demo-03-busqueda-global.md) | Pendiente | Intermedio | Sin buscador → overlay `Ctrl/Cmd+K` que busca y navega | frontend-gen, service-gen |
+| 4 | [Dashboard de KPIs con gráficas](./demo-04-dashboard-kpis.md) | ✔ Implementada (v1 y v2 en `main`) | Intermedio-Avanzado | Solo tabla → vista `/dashboard` con tarjetas y charts | toda la org NOVA |
+| 5 | [Internacionalización ES/EN](./demo-05-internacionalizacion.md) | Pendiente | Intermedio | UI en un idioma → selector que traduce al vuelo y persiste | frontend-gen |
+| 6 | [Tablero Kanban con drag & drop en vivo](./demo-06-tablero-kanban.md) | Nueva (~45 min) | Avanzado | Tabla plana → tablero `/board` interactivo, sincronizado en vivo entre pestañas | toda la org NOVA |
 
 ## Organización de agentes NOVA
 
@@ -78,4 +79,4 @@ docker compose up --build      # backend + frontend
 
 ---
 
-**Última actualización**: 2026-06-29
+**Última actualización**: 2026-07-18
