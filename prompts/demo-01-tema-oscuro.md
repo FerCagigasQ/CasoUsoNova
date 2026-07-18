@@ -1,92 +1,122 @@
-# Demo 1: Tema oscuro / claro con conmutador persistente
+# Demo 1: Tema oscuro / claro con preferencias persistidas y sincronización en vivo
 
-**Sprint de desarrollo**: Theming de la UI (Angular Material)
-**Duración estimada**: 2-3 horas
-**Complejidad**: Principiante
-**Punto de entrada**: `nova-architect` (recibe el objetivo y **solo delega**, no programa)
-**Agentes que ejecutan** (2): nova-frontend-gen, nova-release-mgr
+**Sprint de desarrollo**: Theming de plataforma con preferencias de usuario full-stack
+**Duración estimada**: 45-60 minutos (algo menos que la demo del dashboard)
+**Complejidad**: Avanzado
+**Punto de entrada**: `nova-architect` (recibe el objetivo y delega)
+**Agentes que ejecutan** (delegación máxima, **toda la org NOVA**): nova-repo-provisioner, nova-service-gen, nova-frontend-gen, nova-api-integr, nova-async-comm, nova-ops-monitor, nova-release-mgr
 
-> Demo de desarrollo. El objetivo es **ver a los agentes NOVA escribir código** sobre la plataforma
-> y observar un **efecto visible en la UI** (estado inicial → final). No introduce lógica de negocio.
+> Demo de desarrollo sobre la plataforma ya entregada (dashboard v2 con SSE y observabilidad **ya en
+> `main`**). El resultado es un **efecto muy visible en la UI**: toda la aplicación conmuta entre tema
+> claro y oscuro, la preferencia se **persiste en el backend** y se **sincroniza en vivo** entre pestañas.
 
 > **Cómo se entrega este prompt.** El operador crea **un único objetivo (Goal) y una incidencia raíz
 > asignada a `nova-architect`** con el contenido de este PRD. **No se asignan sub-tareas a mano.**
-> `nova-architect` **recibe el objetivo y lo descompone delegándolo a 2 agentes** (una sub-incidencia
-> por agente con sus dependencias/blockers). El arquitecto **no escribe código**: su trabajo es delegar,
-> revisar lo entregado y aprobar la release. El apartado 6 describe **la delegación que ejecuta el
-> arquitecto**, no un reparto previo del operador.
+> `nova-architect` **recibe el objetivo y lo descompone con delegación máxima**: crea **una sub-incidencia
+> por cada agente de la organización** (con sus dependencias/blockers), de modo que **todos los agentes
+> NOVA trabajan** — no queda ninguno en standby. El arquitecto revisa el código entregado y aprueba la
+> release. El apartado 6 describe **la delegación que ejecuta el arquitecto**, no un reparto previo del operador.
 
 ---
 
 ## 1. Objetivo
 
-Añadir un **conmutador de tema claro/oscuro** a la barra superior de `guarantees-ui` (Angular 17 +
-Material) que aplique el tema en toda la aplicación y **persista** la elección del usuario entre
-recargas y sesiones.
+Añadir un **conmutador de tema claro/oscuro** en la barra superior que aplique el tema en toda la app
+(Angular 17 + Material), **persista la preferencia en el backend** (`/api/v1/preferences`), la
+**sincronice en vivo entre pestañas** reutilizando el canal SSE existente y quede **instrumentada**
+en observabilidad.
 
 ## 2. Contexto
 
-La aplicación arranca hoy con un único tema claro (`indigo-pink`). Un conmutador de tema es una
-mejora de plataforma transversal: afecta a tipografía, superficies, tablas, diálogos y badges, por lo
-que es un buen escaparate de cómo el agente de frontend toca **tokens de diseño** sin romper el
-dominio existente.
+La plataforma arranca hoy con un único tema claro (`indigo-pink`). Elevar el theming a una preferencia
+de usuario full-stack lo convierte en el escaparate ideal de **delegación máxima**: tokens de diseño en
+frontend, un mini-dominio de preferencias en backend, contrato OpenAPI, evento en tiempo real y métricas.
 
-## 3. Alcance
+### Estado actual (ya en `main`)
+
+- UI con tema claro fijo, sin control de tema.
+- Canal SSE de eventos (`guarantee-events`) y Actuator con `health`, `metrics` y `prometheus`.
+
+## 3. Alcance (por área)
+
+### Toolchain (`nova-repo-provisioner`)
+
+- [ ] Verificar que el toolchain Sass/Material soporta `mat.define-light-theme`/`mat.define-dark-theme`
+      (versiones fijadas en `package.json`/lockfile) y que el build resuelve los dos temas.
+
+### Backend (`nova-service-gen`)
+
+- [ ] Endpoints `GET /api/v1/preferences` y `PUT /api/v1/preferences` con body `{ "theme": "light" | "dark" }`,
+      persistidos en H2 (entidad `UserPreference`, validación 422 para valores inválidos). Tests de integración.
 
 ### Frontend (`nova-frontend-gen`)
 
-- [ ] Crear `ThemeService` (Angular, `providedIn: 'root'`) con estado reactivo (`signal`/`BehaviorSubject`)
-      `theme: 'light' | 'dark'` y métodos `toggle()`, `set(theme)`, `current()`.
-- [ ] Persistir la preferencia en `localStorage` (clave `nova.theme`) y leerla al iniciar; si no existe,
-      respetar `prefers-color-scheme` del sistema.
-- [ ] Definir dos temas Material en `styles.scss` con `@use '@angular/material' as mat;`
-      (`mat.define-light-theme` / `mat.define-dark-theme`) y aplicarlos bajo las clases `.theme-light`
-      / `.theme-dark` en `<body>`.
-- [ ] Añadir un botón con icono (`mat-icon-button` con `light_mode`/`dark_mode`) en `app.component.html`
-      que llame a `ThemeService.toggle()`.
-- [ ] Asegurar contraste correcto en tabla, badges de estado/tipo, diálogos y formularios en ambos temas.
+- [ ] `ThemeService` reactivo (`signal`) con `toggle()`/`set()`; carga inicial desde `GET /preferences`
+      con fallback a `localStorage` (`nova.theme`) y a `prefers-color-scheme`.
+- [ ] Dos temas Material (`.theme-light`/`.theme-dark` en `<body>`) con contraste AA en tabla, badges,
+      diálogos, formularios y dashboard.
+- [ ] Botón `mat-icon-button` (`light_mode`/`dark_mode`) en la barra que conmuta y guarda vía `PUT`.
+
+### Integración / contrato (`nova-api-integr`)
+
+- [ ] Documentar `GET`/`PUT /preferences` en OpenAPI con ejemplos y errores; revalidar CORS.
+
+### Tiempo real (`nova-async-comm`)
+
+- [ ] Publicar un evento de **cambio de preferencia** en el canal SSE existente y consumirlo en la app:
+      cambiar el tema en una pestaña **conmuta el tema solo** en las demás pestañas abiertas.
+
+### Observabilidad (`nova-ops-monitor`)
+
+- [ ] Contador Micrometer `ui.theme.toggles` (tag `theme=light|dark`) incrementado en el `PUT`,
+      visible en `/actuator/prometheus`.
 
 ### Release (`nova-release-mgr`)
 
-- [ ] Verificar el build de producción (`ng build`) y el arranque Docker, y aplicar la skill
-      `nova-post-gen-validation` como gate antes de aprobar.
+- [ ] Verificar build + arranque Docker de ambos servicios y ejecutar el gate `nova-post-gen-validation`.
 
 ## 4. Aceptación
 
-- Al pulsar el conmutador, **toda** la UI cambia de tema al instante (sin recargar).
-- La preferencia **se mantiene** tras recargar la página y al volver a abrir la app.
-- Sin preferencia previa, se respeta el tema del sistema operativo.
-- Contraste AA en textos y badges en ambos temas; sin errores en consola.
-- Tests unitarios del `ThemeService` (toggle, set, lectura de `localStorage`).
+- Al pulsar el conmutador, **toda** la UI (incluido el dashboard con charts) cambia de tema al instante.
+- La preferencia persiste en backend: tras recargar o abrir otro navegador con la misma sesión, se respeta.
+- Con dos pestañas abiertas, cambiar el tema en una **lo cambia en vivo** en la otra vía SSE.
+- `/actuator/prometheus` expone `ui_theme_toggles_total` con su tag.
+- OpenAPI refleja los endpoints; contraste AA en ambos temas; sin errores en consola; TypeScript estricto sin `any`.
+- Tests: endpoints de preferencias (integración) y `ThemeService` + render en ambos temas (front).
 
 ## 5. Demostración (estado inicial → final)
 
 | Antes | Después |
 |-------|---------|
-| App en tema claro, sin control de tema en la barra. | Botón de tema en la barra; un clic conmuta toda la UI a oscuro y la elección persiste tras recargar. |
+| App en tema claro fijo, sin control de tema. | Conmutador en la barra: un clic oscurece toda la UI, la preferencia se guarda en backend y las demás pestañas cambian solas. |
 
-**Guion**: abrir `http://localhost` → mostrar tema claro → pulsar el botón → la app pasa a oscuro
-(tabla, badges, diálogos) → recargar → sigue en oscuro.
+**Guion**: abrir `http://localhost` → pulsar el conmutador y ver toda la UI (tabla, dashboard, diálogos)
+pasar a oscuro → abrir una segunda pestaña y conmutar: la primera **cambia sola** → recargar y comprobar
+que persiste → abrir `/actuator/prometheus` y enseñar el contador de toggles.
 
 ## 6. Delegación que ejecuta `nova-architect`
 
-> El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone y delega**
-> creando estas sub-incidencias (una por agente de la org **NOVA**, `QPaperClip/containers/nova-org`),
-> con dependencias entre ellas. No es un reparto hecho a mano por el operador.
-
-El arquitecto **solo delega** (no programa) y crea **2 sub-incidencias**, una por agente:
+> El operador entrega **solo el objetivo** a `nova-architect`. El arquitecto **descompone con delegación
+> máxima** y crea **una sub-incidencia por cada agente** de la org **NOVA** (`QPaperClip/containers/nova-org`),
+> con dependencias entre ellas. No es un reparto hecho a mano por el operador, y **ningún agente queda en standby**.
 
 | # | Sub-incidencia que crea el arquitecto | Agente delegado | Adapter | Depende de |
 |---|----------------------------------------|-----------------|---------|------------|
-| 1 | Implementar `ThemeService`, los dos temas Material, el botón de la barra y la persistencia (tests Karma/Jasmine). | **nova-frontend-gen** | Antigravity | — |
-| 2 | Verificar build de producción (`ng build`) + arranque Docker; aplicar la skill `nova-post-gen-validation` como gate. | **nova-release-mgr** | Codex | #1 |
+| 1 | Verificar toolchain Sass/Material para dos temas (versiones fijadas + lockfile) y que el build resuelve. | **nova-repo-provisioner** | Claude Code | — |
+| 2 | Endpoints `GET`/`PUT /api/v1/preferences` con entidad `UserPreference` y validación. Tests. | **nova-service-gen** | Codex | — |
+| 3 | `ThemeService`, dos temas Material, botón en la barra, carga/guardado vía API y fallbacks. Tests front. | **nova-frontend-gen** | Antigravity | #1, #2 |
+| 4 | Documentar `GET`/`PUT /preferences` en OpenAPI y revalidar CORS. | **nova-api-integr** | Antigravity | #2 |
+| 5 | Emitir el evento de cambio de preferencia por SSE y consumirlo para sincronizar el tema entre pestañas. | **nova-async-comm** | Codex | #2, #3 |
+| 6 | Contador Micrometer `ui.theme.toggles` expuesto en Prometheus. | **nova-ops-monitor** | Codex | #2 |
+| 7 | Verificar build + arranque Docker y ejecutar el gate `nova-post-gen-validation`. | **nova-release-mgr** | Codex | #3, #4, #5, #6 |
 
-`nova-api-integr`, `nova-async-comm` y `nova-ops-monitor` quedan en **standby** (no se necesita contrato de servidor, eventos ni observabilidad nueva).
+> **Delegación máxima**: los 7 agentes ejecutores trabajan; `nova-architect` coordina, fija los contratos
+> y aprueba. Ningún agente queda en standby.
 
 ### Flujo de ejecución (orquestado por el arquitecto)
 
 1. El operador crea el Goal y asigna la **incidencia raíz a `nova-architect`**.
-2. **nova-architect** **solo delega**: descompone el objetivo y crea las 2 sub-incidencias anteriores (no escribe código).
-3. **nova-frontend-gen** implementa el conmutador y los temas.
-4. **nova-release-mgr** valida build + arranque y ejecuta el gate (bloqueado hasta que #1 termine).
-5. **nova-architect** revisa y aprueba la entrega (PR en rama separada, sin merge directo a `main`).
+2. **nova-architect** descompone con delegación máxima y **delega** las 7 sub-incidencias, fijando el contrato de `/preferences` y del evento SSE.
+3. **nova-repo-provisioner** verifica el toolchain y **nova-service-gen** implementa las preferencias (ambos sin bloqueo previo).
+4. Con el contrato listo, **nova-frontend-gen**, **nova-api-integr** y **nova-ops-monitor** trabajan en paralelo; **nova-async-comm** cierra la sincronización en vivo.
+5. **nova-release-mgr** valida y aplica el gate cuando convergen; **nova-architect** revisa y aprueba la entrega (PR en rama separada).

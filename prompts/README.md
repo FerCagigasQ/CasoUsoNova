@@ -16,18 +16,18 @@ y al final de una demo.
   Spring Boot 3.2 / Java 17.
 - **Dirigidos por el arquitecto**: el operador entrega **solo el objetivo** a `nova-architect`
   (incidencia raíz); **no se asignan sub-tareas a mano**. El `nova-architect` **recibe el prompt,
-  lo descompone en ≤5 sub-tareas y las delega** a los demás agentes (modo demo, sin cascadas), que
-  escriben el código; luego revisa y aprueba.
+  lo descompone con delegación máxima y delega una sub-incidencia por agente** (modo demo, sin
+  cascadas), que escriben el código; luego revisa y aprueba.
 
 ## Demos
 
 | # | PRD | Estado | Complejidad | Efecto en UI (inicial → final) | Agentes principales |
 |---|-----|--------|-------------|--------------------------------|---------------------|
-| 1 | [Tema oscuro / claro](./demo-01-tema-oscuro.md) | Pendiente | Principiante | Sin control de tema → conmutador que cambia toda la UI y persiste | frontend-gen |
-| 2 | [Exportación a CSV / Excel](./demo-02-exportacion-datos.md) | Pendiente | Principiante-Intermedio | Sin exportación → botón que descarga las filas visibles | frontend-gen, service-gen |
-| 3 | [Búsqueda global + paleta de comandos](./demo-03-busqueda-global.md) | Pendiente | Intermedio | Sin buscador → overlay `Ctrl/Cmd+K` que busca y navega | frontend-gen, service-gen |
+| 1 | [Tema oscuro / claro con preferencias y sync en vivo](./demo-01-tema-oscuro.md) | Pendiente (~45-60 min) | Avanzado | Tema claro fijo → conmutador que oscurece toda la UI, persiste en backend y sincroniza pestañas en vivo | toda la org NOVA |
+| 2 | [Exportación CSV / Excel asíncrona con aviso en vivo](./demo-02-exportacion-datos.md) | Pendiente (~45-60 min) | Avanzado | Sin exportación → CSV instantáneo y Excel por job asíncrono con notificación SSE y descarga | toda la org NOVA |
+| 3 | [Búsqueda global + paleta de comandos con resultados en vivo](./demo-03-busqueda-global.md) | Pendiente (~45-60 min) | Avanzado | Sin buscador → overlay `Ctrl/Cmd+K` que busca, navega y se refresca en vivo | toda la org NOVA |
 | 4 | [Dashboard de KPIs con gráficas](./demo-04-dashboard-kpis.md) | ✔ Implementada (v1 y v2 en `main`) | Intermedio-Avanzado | Solo tabla → vista `/dashboard` con tarjetas y charts | toda la org NOVA |
-| 5 | [Internacionalización ES/EN](./demo-05-internacionalizacion.md) | Pendiente | Intermedio | UI en un idioma → selector que traduce al vuelo y persiste | frontend-gen |
+| 5 | [Internacionalización ES/EN full-stack](./demo-05-internacionalizacion.md) | Pendiente (~45-60 min) | Avanzado | UI en un idioma → selector que traduce al vuelo (incl. errores del backend), persiste y sincroniza pestañas | toda la org NOVA |
 | 6 | [Tablero Kanban con drag & drop en vivo](./demo-06-tablero-kanban.md) | Nueva (~45 min) | Avanzado | Tabla plana → tablero `/board` interactivo, sincronizado en vivo entre pestañas | toda la org NOVA |
 
 ## Organización de agentes NOVA
@@ -42,11 +42,11 @@ y al final de una demo.
 | **nova-frontend-gen** | Frontend (Angular 17 + Material) | Antigravity |
 | **nova-api-integr** | Integración, OpenAPI/Swagger, CORS, contrato de error | Antigravity |
 | **nova-release-mgr** | Docker, release y gate de validación | Codex |
-| **nova-async-comm** | Eventos / notificaciones reactivas | standby* |
-| **nova-ops-monitor** | Observabilidad / healthchecks | standby* |
+| **nova-async-comm** | Eventos / notificaciones reactivas | Codex |
+| **nova-ops-monitor** | Observabilidad / healthchecks | Codex |
 
-\* En estos PRDs `nova-async-comm` y `nova-ops-monitor` quedan en **standby**: aparecen en el org chart
-pero solo intervienen si una feature concreta lo requiere.
+Todos los PRDs pendientes están diseñados con **delegación máxima**: los 7 agentes ejecutores trabajan
+y **ningún agente queda en standby** (como en la demo del dashboard ya implementada).
 
 Cada PRD incluye una sección **Delegación que ejecuta `nova-architect`** con las sub-incidencias que
 el arquitecto crea y delega (una por agente, con sus dependencias) y el **flujo de ejecución**.
