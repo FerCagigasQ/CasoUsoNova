@@ -4,6 +4,9 @@ import com.example.guarantees.domain.Guarantee;
 import com.example.guarantees.domain.GuaranteeStatus;
 import com.example.guarantees.domain.GuaranteeType;
 import com.example.guarantees.repository.GuaranteeRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.xssf.usermodel.XSSFFont;
@@ -21,6 +24,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class ExportService {
@@ -28,19 +32,23 @@ public class ExportService {
     private final GuaranteeRepository guaranteeRepository;
     private final GuaranteeEventService guaranteeEventService;
     private final ExportJobStore jobStore;
+    private final MeterRegistry meterRegistry;
     private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
 
     public ExportService(GuaranteeRepository guaranteeRepository,
                         GuaranteeEventService guaranteeEventService,
-                        ExportJobStore jobStore) {
+                        ExportJobStore jobStore,
+                        MeterRegistry meterRegistry) {
         this.guaranteeRepository = guaranteeRepository;
         this.guaranteeEventService = guaranteeEventService;
         this.jobStore = jobStore;
+        this.meterRegistry = meterRegistry;
     }
 
     @Async
     public void exportToExcel(String jobId, String format, GuaranteeStatus status,
                              GuaranteeType type, String sortBy, String sortDirection) {
+        long start = System.nanoTime();
         try {
             jobStore.updateProgress(jobId, 10, "Fetching guarantees...");
 
@@ -67,6 +75,16 @@ public class ExportService {
             // Mark job as completed
             jobStore.markCompleted(jobId, resultFile);
 
+            // Record success metrics
+            Counter.builder("exports.jobs")
+                    .tags("format", format, "result", "ok")
+                    .register(meterRegistry)
+                    .increment();
+            Timer.builder("exports.jobs.duration")
+                    .tags("format", format)
+                    .register(meterRegistry)
+                    .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+
             // Emit event for completion (for #5)
             guaranteeEventService.publishEvent("guarantee-events", "export-ready",
                 new java.util.HashMap<String, String>() {{
@@ -77,6 +95,16 @@ public class ExportService {
 
         } catch (Exception e) {
             jobStore.markFailed(jobId, e);
+
+            // Record failure metrics
+            Counter.builder("exports.jobs")
+                    .tags("format", format, "result", "error")
+                    .register(meterRegistry)
+                    .increment();
+            Timer.builder("exports.jobs.duration")
+                    .tags("format", format)
+                    .register(meterRegistry)
+                    .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
         }
     }
 

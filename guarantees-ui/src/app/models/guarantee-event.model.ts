@@ -5,3 +5,10 @@ export interface GuaranteeChangeEvent {
   status: string;
   occurredAt: string;
 }
+
+export interface ExportReadyEvent {
+  jobId: string;
+  status: string;
+  downloadUrl: string;
+  message?: string;
+}
