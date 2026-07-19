@@ -33,7 +33,7 @@ import { Guarantee } from '../../models/guarantee.model';
   styleUrl: './guarantee-list.component.scss'
 })
 export class GuaranteeListComponent implements OnInit, OnDestroy {
-  displayedColumns = ['reference', 'type', 'amount', 'issueDate', 'expiryDate', 'applicant', 'beneficiary', 'status', 'actions'];
+  displayedColumns = ['reference', 'type', 'amount', 'issueDate', 'expiryDate', 'expiryBadge', 'applicant', 'beneficiary', 'status', 'actions'];
   guarantees: Guarantee[] = [];
   loading = false;
 
@@ -44,6 +44,7 @@ export class GuaranteeListComponent implements OnInit, OnDestroy {
   excelJobId: string | null = null;
 
   private eventSubscription: Subscription | null = null;
+  private expirationSubscription: Subscription | null = null;
 
   readonly statuses = ['', 'DRAFT', 'ISSUED', 'AMENDED', 'CLAIMED', 'EXPIRED', 'CANCELLED'];
   readonly types = ['', 'PERFORMANCE', 'ADVANCE_PAYMENT', 'BID_BOND', 'WARRANTY'];
@@ -70,10 +71,22 @@ export class GuaranteeListComponent implements OnInit, OnDestroy {
         // SSE connection errors are non-fatal; exportingExcel state is preserved
       }
     });
+
+    this.expirationSubscription = this.eventsService.guaranteeEvents().subscribe({
+      next: event => {
+        if (event.type === 'expiration-auto') {
+          this.load();
+        }
+      },
+      error: () => {
+        console.warn('SSE connection error for expiration events');
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.eventSubscription?.unsubscribe();
+    this.expirationSubscription?.unsubscribe();
   }
 
   load(): void {
@@ -101,6 +114,43 @@ export class GuaranteeListComponent implements OnInit, OnDestroy {
       CLAIMED: 'claimed', EXPIRED: 'expired', CANCELLED: 'cancelled'
     };
     return map[status] || '';
+  }
+
+  getDaysUntilExpiry(expiryDate: string): number {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  getExpiryRiskLevel(daysUntilExpiry: number, amount: number): string {
+    if (daysUntilExpiry < 0) return 'critical';
+    if (daysUntilExpiry === 0) return 'critical';
+    if (daysUntilExpiry <= 7 && amount < 50000) return 'low';
+    if ((daysUntilExpiry >= 8 && daysUntilExpiry <= 30) || (amount >= 50000 && amount <= 200000)) return 'medium';
+    if ((daysUntilExpiry >= 31 && daysUntilExpiry <= 60) || amount > 200000) return 'high';
+    return 'none';
+  }
+
+  getExpiryBadgeColor(daysUntilExpiry: number, amount: number): string {
+    const level = this.getExpiryRiskLevel(daysUntilExpiry, amount);
+    const map: Record<string, string> = {
+      'none': '#4caf50',
+      'low': '#8bc34a',
+      'medium': '#ffc107',
+      'high': '#ff9800',
+      'critical': '#f44336'
+    };
+    return map[level] || '#e0e0e0';
+  }
+
+  getExpiryBadgeText(daysUntilExpiry: number): string {
+    if (daysUntilExpiry < 0) return 'Expired';
+    if (daysUntilExpiry === 0) return 'Expires Today';
+    if (daysUntilExpiry === 1) return 'Expires Tomorrow';
+    return `Expires in ${daysUntilExpiry} days`;
   }
 
   exportCSV(): void {

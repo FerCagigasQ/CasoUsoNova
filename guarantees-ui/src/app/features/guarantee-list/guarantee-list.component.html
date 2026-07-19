@@ -74,6 +74,19 @@
           <td mat-cell *matCellDef="let g">{{ g.expiryDate }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="expiryBadge">
+          <th mat-header-cell *matHeaderCellDef>Expiry Status</th>
+          <td mat-cell *matCellDef="let g">
+            @let daysLeft = getDaysUntilExpiry(g.expiryDate);
+            <span
+              class="expiry-badge"
+              [style.backgroundColor]="getExpiryBadgeColor(daysLeft, g.amount)"
+            >
+              {{ getExpiryBadgeText(daysLeft) }}
+            </span>
+          </td>
+        </ng-container>
+
         <ng-container matColumnDef="applicant">
           <th mat-header-cell *matHeaderCellDef>Applicant</th>
           <td mat-cell *matCellDef="let g">{{ g.applicant.firstName }} {{ g.applicant.lastName }}</td>

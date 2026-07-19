@@ -86,3 +86,28 @@ export interface ClaimRequest {
   claimedAmount: number;
   reason: string;
 }
+
+export interface ExpiryCalendarDay {
+  day: number;
+  guarantees: ExpiryGuarantee[];
+  totalByAmount: number;
+  totalByCurrency: Record<string, number>;
+  aggregateRiskLevel: 'none' | 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface ExpiryGuarantee {
+  id: string;
+  reference: string;
+  beneficiary: { firstName: string; lastName: string };
+  amount: number;
+  currency: string;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  riskLevel: 'none' | 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface ExpiryCalendar {
+  month: string;
+  days: ExpiryCalendarDay[];
+  riskCatalog: Record<string, string>;
+}

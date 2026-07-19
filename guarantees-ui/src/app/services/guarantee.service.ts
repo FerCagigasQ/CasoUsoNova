@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Guarantee, Applicant, Beneficiary, IssuingBank,
-  CreateGuaranteeRequest, AmendmentRequest, ClaimRequest, Claim
+  CreateGuaranteeRequest, AmendmentRequest, ClaimRequest, Claim,
+  ExpiryCalendar
 } from '../models/guarantee.model';
 
 @Injectable({ providedIn: 'root' })
@@ -61,5 +62,11 @@ export class GuaranteeService {
 
   getIssuingBanks(): Observable<IssuingBank[]> {
     return this.http.get<IssuingBank[]>('/api/v1/issuing-banks');
+  }
+
+  getExpiryCalendar(month: string): Observable<ExpiryCalendar> {
+    return this.http.get<ExpiryCalendar>(`${this.api}/expiry-calendar`, {
+      params: { month }
+    });
   }
 }

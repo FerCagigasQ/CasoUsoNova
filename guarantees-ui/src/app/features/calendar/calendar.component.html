@@ -1,0 +1,139 @@
+<div class="calendar-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Expiry Calendar</mat-card-title>
+      <mat-card-subtitle>Guarantee expiration schedule by day</mat-card-subtitle>
+      <div class="header-controls">
+        <button mat-icon-button (click)="previousMonth()" title="Previous month">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <span class="month-display">{{ currentMonth | date: 'MMMM yyyy' }}</span>
+        <button mat-icon-button (click)="nextMonth()" title="Next month">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Risk Legend -->
+      <div class="risk-legend">
+        <h3>Risk Levels</h3>
+        <div class="legend-items">
+          @for (level of ['none', 'low', 'medium', 'high', 'critical']; track level) {
+            <div class="legend-item">
+              <span class="legend-color" [style.backgroundColor]="getRiskColor(level)"></span>
+              <span class="legend-label">
+                {{ getRiskLevelLabel(level) }}: {{ calendar?.riskCatalog?.[level] || '' }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (loading) {
+        <div class="spinner-container">
+          <mat-spinner diameter="40"></mat-spinner>
+        </div>
+      } @else if (error) {
+        <div class="error-message">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error }}</span>
+        </div>
+      } @else if (!calendar) {
+        <div class="empty-message">
+          <mat-icon>calendar_today</mat-icon>
+          <span>No calendar data available</span>
+        </div>
+      } @else {
+        <!-- Calendar Grid -->
+        <div class="calendar-wrapper">
+          <div class="calendar-grid">
+            <!-- Week day headers -->
+            <div class="weekday-row">
+              @for (day of weekDays; track day) {
+                <div class="weekday">{{ day }}</div>
+              }
+            </div>
+
+            <!-- Calendar days -->
+            @for (dayNum of getCalendarDays(); track dayNum) {
+              @if (dayNum === null) {
+                <div class="calendar-day empty"></div>
+              } @else {
+                @let dayData = getDayData(dayNum);
+                <div
+                  class="calendar-day"
+                  [class.has-data]="dayData"
+                  [class.selected]="selectedDay?.day === dayNum"
+                  [style.backgroundColor]="dayData ? getRiskColor(dayData.aggregateRiskLevel) : 'white'"
+                  (click)="selectDay(dayData!)"
+                  [matTooltip]="dayData ? (dayData.totalByAmount | number) + ' ' + (dayData.totalByCurrency | json) : ''"
+                >
+                  <div class="day-number">{{ dayNum }}</div>
+                  @if (dayData) {
+                    <div class="day-count">{{ dayData.guarantees.length }} exp.</div>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Side Panel -->
+          @if (selectedDay) {
+            <div class="side-panel">
+              <div class="panel-header">
+                <h3>{{ selectedDay.day }} - {{ currentMonth | date: 'MMMM yyyy' }}</h3>
+                <button mat-icon-button (click)="selectedDay = null" title="Close">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+
+              <div class="panel-content">
+                <h4>Expiring Guarantees ({{ selectedDay.guarantees.length }})</h4>
+
+                @if (selectedDay.guarantees.length === 0) {
+                  <div class="empty-list">
+                    <span>No guarantees expiring on this day</span>
+                  </div>
+                } @else {
+                  <mat-list>
+                    @for (g of selectedDay.guarantees; track g.id) {
+                      <mat-list-item>
+                        <div class="guarantee-item" (click)="onGuaranteeClick(g.id)" style="cursor: pointer;">
+                          <div class="guarantee-info">
+                            <strong>{{ g.reference }}</strong>
+                            <span class="beneficiary">{{ g.beneficiary.firstName }} {{ g.beneficiary.lastName }}</span>
+                          </div>
+                          <div class="guarantee-details">
+                            <span class="amount">{{ g.amount | number: '1.0-0' }} {{ g.currency }}</span>
+                            <span class="days" [class.expired]="g.daysUntilExpiry < 0">
+                              {{ daysUntilExpiry(g) }}
+                            </span>
+                          </div>
+                          <span
+                            class="risk-badge"
+                            [style.backgroundColor]="getRiskColor(g.riskLevel)"
+                          >
+                            {{ getRiskLevelLabel(g.riskLevel) }}
+                          </span>
+                        </div>
+                      </mat-list-item>
+                      @if (!$last) {
+                        <mat-divider></mat-divider>
+                      }
+                    }
+                  </mat-list>
+                }
+
+                <div class="panel-footer">
+                  <strong>Total Amount:</strong> {{ selectedDay.totalByAmount | number: '1.2-2' }}
+                  <strong>Currency:</strong> {{ selectedDay.totalByCurrency | json }}
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
