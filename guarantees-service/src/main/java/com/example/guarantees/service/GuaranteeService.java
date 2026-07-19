@@ -27,8 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,8 +45,9 @@ public class GuaranteeService {
     private final AmendmentRepository amendmentRepository;
     private final ClaimRepository claimRepository;
     private final GuaranteeEventService guaranteeEventService;
+    private final Clock clock;
 
-    public GuaranteeService(GuaranteeRepository guaranteeRepository, ApplicantRepository applicantRepository, BeneficiaryRepository beneficiaryRepository, IssuingBankRepository issuingBankRepository, AmendmentRepository amendmentRepository, ClaimRepository claimRepository, GuaranteeEventService guaranteeEventService) {
+    public GuaranteeService(GuaranteeRepository guaranteeRepository, ApplicantRepository applicantRepository, BeneficiaryRepository beneficiaryRepository, IssuingBankRepository issuingBankRepository, AmendmentRepository amendmentRepository, ClaimRepository claimRepository, GuaranteeEventService guaranteeEventService, Clock clock) {
         this.guaranteeRepository = guaranteeRepository;
         this.applicantRepository = applicantRepository;
         this.beneficiaryRepository = beneficiaryRepository;
@@ -51,6 +55,7 @@ public class GuaranteeService {
         this.amendmentRepository = amendmentRepository;
         this.claimRepository = claimRepository;
         this.guaranteeEventService = guaranteeEventService;
+        this.clock = clock;
     }
 
     public List<GuaranteeDTO> findAll(GuaranteeStatus status, GuaranteeType type) {
@@ -226,6 +231,40 @@ public class GuaranteeService {
                         claim.getReason()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @CacheEvict(value = "metrics", allEntries = true)
+    public int expireDueGuarantees() {
+        LocalDate today = LocalDate.now(clock);
+        List<Guarantee> guaranteesToExpire = guaranteeRepository.findByStatusInAndExpiryDateLessThanEqual(
+                List.of(GuaranteeStatus.ISSUED, GuaranteeStatus.AMENDED),
+                today);
+
+        guaranteesToExpire.forEach(guarantee -> {
+            guarantee.setStatus(GuaranteeStatus.EXPIRED);
+            publishChange(guarantee, "EXPIRED_AUTO");
+            guaranteeEventService.publishEvent("guarantee-events", "expiration-auto", Map.of(
+                    "guaranteeId", String.valueOf(guarantee.getId()),
+                    "reference", guarantee.getReference(),
+                    "status", guarantee.getStatus().name(),
+                    "expiryDate", String.valueOf(guarantee.getExpiryDate()),
+                    "reason", "Auto-expired by scheduler",
+                    "expiredAt", Instant.now(clock).toString()
+            ));
+        });
+
+        guaranteeRepository.saveAll(guaranteesToExpire);
+        return guaranteesToExpire.size();
+    }
+
+    public long countExpiringWithinDays(int days) {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate upTo = today.plusDays(days);
+        return guaranteeRepository.findByStatusInAndExpiryDateLessThanEqual(
+                List.of(GuaranteeStatus.ISSUED, GuaranteeStatus.AMENDED),
+                upTo).stream()
+                .filter(g -> !g.getExpiryDate().isBefore(today))
+                .count();
     }
 
     private void publishChange(Guarantee guarantee, String action) {
