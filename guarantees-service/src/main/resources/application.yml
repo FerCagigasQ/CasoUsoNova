@@ -33,3 +33,8 @@ management:
   endpoint:
     health:
       show-details: always
+
+guarantees:
+  expiry:
+    scheduler:
+      fixed-rate-ms: 30000

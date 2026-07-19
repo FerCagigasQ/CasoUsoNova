@@ -15,3 +15,8 @@ spring:
       settings:
         web-allow-others: true
         trace: false
+
+guarantees:
+  expiry:
+    scheduler:
+      fixed-rate-ms: 30000

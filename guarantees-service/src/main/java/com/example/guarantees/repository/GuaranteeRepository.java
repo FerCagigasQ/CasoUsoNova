@@ -17,6 +17,11 @@ public interface GuaranteeRepository extends JpaRepository<Guarantee, Long> {
     List<Guarantee> findByStatus(GuaranteeStatus status);
     List<Guarantee> findByType(GuaranteeType type);
     List<Guarantee> findByStatusAndType(GuaranteeStatus status, GuaranteeType type);
+    List<Guarantee> findByStatusInAndExpiryDateLessThanEqual(List<GuaranteeStatus> statuses, LocalDate date);
+    List<Guarantee> findByExpiryDateBetweenAndStatusNotInOrderByExpiryDateAscReferenceAsc(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<GuaranteeStatus> excludedStatuses);
 
     @Query("SELECT g.status, COUNT(g) FROM Guarantee g GROUP BY g.status")
     List<Object[]> countByStatus();

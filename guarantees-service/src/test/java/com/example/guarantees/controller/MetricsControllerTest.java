@@ -38,9 +38,21 @@ class MetricsControllerTest {
 
     @Test
     void getMetrics_totalMatchesSumOfByStatus() throws Exception {
-        mockMvc.perform(get("/api/v1/metrics").accept(MediaType.APPLICATION_JSON))
+        var result = mockMvc.perform(get("/api/v1/metrics").accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.total").value(6));
+            .andReturn();
+
+        var json = new com.fasterxml.jackson.databind.ObjectMapper()
+            .readTree(result.getResponse().getContentAsString());
+        int total = json.get("total").asInt();
+        int sumByStatus = 0;
+        var byStatus = json.get("byStatus").fields();
+        while (byStatus.hasNext()) {
+            sumByStatus += byStatus.next().getValue().asInt();
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(total > 0, "total should be positive");
+        org.junit.jupiter.api.Assertions.assertEquals(total, sumByStatus,
+            "total should equal the sum of byStatus counts");
     }
 
     @Test

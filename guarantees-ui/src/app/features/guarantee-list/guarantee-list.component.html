@@ -77,12 +77,11 @@
         <ng-container matColumnDef="expiryBadge">
           <th mat-header-cell *matHeaderCellDef>Expiry Status</th>
           <td mat-cell *matCellDef="let g">
-            @let daysLeft = getDaysUntilExpiry(g.expiryDate);
             <span
               class="expiry-badge"
-              [style.backgroundColor]="getExpiryBadgeColor(daysLeft, g.amount)"
+              [style.backgroundColor]="getExpiryBadgeColor(getDaysUntilExpiry(g.expiryDate), g.amount)"
             >
-              {{ getExpiryBadgeText(daysLeft) }}
+              {{ getExpiryBadgeText(getDaysUntilExpiry(g.expiryDate)) }}
             </span>
           </td>
         </ng-container>

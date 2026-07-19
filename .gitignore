@@ -1,5 +1,9 @@
 # NOVA toolchain (descargado bajo demanda, no versionado)
 .nova-toolchain/
+NOVACLI_PATH/
+
+# Notas de memoria de agentes (workspace Paperclip, no versionado)
+/memory/
 toolchain/nova-le/tools/java/
 toolchain/nova-le/tools/maven/
 

@@ -144,7 +144,7 @@ class ExportServiceTest {
 
         Guarantee guarantee = new Guarantee(
             "REF-002",
-            GuaranteeType.TENDER,
+            GuaranteeType.BID_BOND,
             BigDecimal.valueOf(75000),
             "EUR",
             LocalDate.of(2024, 2, 1),
@@ -219,7 +219,7 @@ class ExportServiceTest {
 
         Guarantee draft = new Guarantee(
             "DRAFT-001",
-            GuaranteeType.TENDER,
+            GuaranteeType.BID_BOND,
             BigDecimal.valueOf(50000),
             "EUR",
             LocalDate.of(2024, 1, 1),

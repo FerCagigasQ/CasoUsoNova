@@ -132,6 +132,38 @@ public class DataSeeder {
                     LocalDate.of(2024, 11, 1), LocalDate.of(2025, 11, 1),
                     GuaranteeStatus.DRAFT, applicant2, bene1, bnp);
             guaranteeRepo.save(g6);
+
+            // Vencimientos inminentes relativos a la fecha actual: alimentan el heatmap
+            // de /calendar y permiten ver la expiración automática en vivo (demo 9)
+            LocalDate today = LocalDate.now();
+
+            Guarantee g7 = new Guarantee(
+                    "BG-2026-007", GuaranteeType.PERFORMANCE,
+                    new BigDecimal("150000.00"), "EUR",
+                    today.minusMonths(6), today,
+                    GuaranteeStatus.ISSUED, applicant1, bene2, bbva);
+            guaranteeRepo.save(g7);
+
+            Guarantee g8 = new Guarantee(
+                    "BG-2026-008", GuaranteeType.BID_BOND,
+                    new BigDecimal("45000.00"), "EUR",
+                    today.minusMonths(3), today.plusDays(3),
+                    GuaranteeStatus.ISSUED, applicant3, bene3, bnp);
+            guaranteeRepo.save(g8);
+
+            Guarantee g9 = new Guarantee(
+                    "BG-2026-009", GuaranteeType.WARRANTY,
+                    new BigDecimal("300000.00"), "USD",
+                    today.minusMonths(2), today.plusDays(15),
+                    GuaranteeStatus.ISSUED, applicant4, bene4, santander);
+            guaranteeRepo.save(g9);
+
+            Guarantee g10 = new Guarantee(
+                    "BG-2026-010", GuaranteeType.ADVANCE_PAYMENT,
+                    new BigDecimal("1500000.00"), "EUR",
+                    today.minusMonths(1), today.plusDays(25),
+                    GuaranteeStatus.ISSUED, applicant2, bene1, bbva);
+            guaranteeRepo.save(g10);
         };
     }
 }

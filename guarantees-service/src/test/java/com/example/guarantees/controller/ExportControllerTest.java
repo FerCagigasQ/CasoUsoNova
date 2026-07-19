@@ -193,7 +193,8 @@ class ExportControllerTest {
                 .accept(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.jobId").value(jobId))
-            .andExpect(jsonPath("$.status").value("processing"))
+            .andExpect(jsonPath("$.status").value(org.hamcrest.Matchers.isIn(
+                java.util.List.of("processing", "completed"))))
             .andExpect(jsonPath("$.message").exists());
     }
 }

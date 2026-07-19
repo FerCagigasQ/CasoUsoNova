@@ -60,20 +60,22 @@
               @if (dayNum === null) {
                 <div class="calendar-day empty"></div>
               } @else {
-                @let dayData = getDayData(dayNum);
-                <div
-                  class="calendar-day"
-                  [class.has-data]="dayData"
-                  [class.selected]="selectedDay?.day === dayNum"
-                  [style.backgroundColor]="dayData ? getRiskColor(dayData.aggregateRiskLevel) : 'white'"
-                  (click)="selectDay(dayData!)"
-                  [matTooltip]="dayData ? (dayData.totalByAmount | number) + ' ' + (dayData.totalByCurrency | json) : ''"
-                >
-                  <div class="day-number">{{ dayNum }}</div>
-                  @if (dayData) {
+                @if (getDayData(dayNum); as dayData) {
+                  <div
+                    class="calendar-day has-data"
+                    [class.selected]="selectedDay?.day === dayNum"
+                    [style.backgroundColor]="getRiskColor(dayData.aggregateRiskLevel)"
+                    (click)="selectDay(dayData)"
+                    [matTooltip]="(dayData.totalByAmount | number) + ' ' + (dayData.totalByCurrency | json)"
+                  >
+                    <div class="day-number">{{ dayNum }}</div>
                     <div class="day-count">{{ dayData.guarantees.length }} exp.</div>
-                  }
-                </div>
+                  </div>
+                } @else {
+                  <div class="calendar-day" [style.backgroundColor]="'white'">
+                    <div class="day-number">{{ dayNum }}</div>
+                  </div>
+                }
               }
             }
           </div>
