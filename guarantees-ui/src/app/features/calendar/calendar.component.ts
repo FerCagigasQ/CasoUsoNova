@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { GuaranteeService } from '../../services/guarantee.service';
 import { GuaranteeEventsService } from '../../services/guarantee-events.service';
@@ -21,7 +22,7 @@ import { Subscription } from 'rxjs';
     CommonModule, RouterLink,
     MatCardModule, MatButtonModule, MatIconModule,
     MatTooltipModule, MatProgressSpinnerModule,
-    MatListModule, MatBadgeModule, MatDividerModule
+    MatListModule, MatBadgeModule, MatDividerModule, MatSnackBarModule
   ],
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.scss'
@@ -41,7 +42,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   constructor(
     private guaranteeService: GuaranteeService,
-    private eventsService: GuaranteeEventsService
+    private eventsService: GuaranteeEventsService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -77,6 +79,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.expirationSubscription = this.eventsService.guaranteeEvents().subscribe({
       next: event => {
         if (event.type === 'expiration-auto') {
+          this.snackBar.open(`Guarantee ${event.reference} has expired`, 'OK', { duration: 5000 });
           this.load();
         }
       },

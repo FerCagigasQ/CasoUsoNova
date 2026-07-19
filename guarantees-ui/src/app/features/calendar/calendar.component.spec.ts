@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarComponent } from './calendar.component';
 import { GuaranteeService } from '../../services/guarantee.service';
 import { GuaranteeEventsService } from '../../services/guarantee-events.service';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { of } from 'rxjs';
 import { ExpiryCalendar } from '../../models/guarantee.model';
 
@@ -47,7 +48,7 @@ describe('CalendarComponent', () => {
     const eventsServiceSpy = jasmine.createSpyObj('GuaranteeEventsService', ['guaranteeEvents']);
 
     await TestBed.configureTestingModule({
-      imports: [CalendarComponent],
+      imports: [CalendarComponent, MatSnackBarModule],
       providers: [
         { provide: GuaranteeService, useValue: guaranteeServiceSpy },
         { provide: GuaranteeEventsService, useValue: eventsServiceSpy }
@@ -153,5 +154,47 @@ describe('CalendarComponent', () => {
     const days = component.getCalendarDays();
     expect(days.length).toBeLessThanOrEqual(42); // 6 weeks * 7 days
     expect(days.length).toBeGreaterThanOrEqual(35); // 5 weeks * 7 days
+  });
+
+  it('should show snackbar notification on expiration-auto event', () => {
+    const snackBar = TestBed.inject(MatSnackBar);
+    spyOn(snackBar, 'open');
+
+    const expirationEvent = {
+      type: 'expiration-auto',
+      eventType: 'expiration-auto',
+      guaranteeId: '1',
+      reference: 'REF-001',
+      status: 'EXPIRED',
+      expiryDate: '2026-07-01',
+      reason: 'Auto-expired by scheduler',
+      expiredAt: '2026-07-19T12:00:00Z'
+    };
+
+    eventsService.guaranteeEvents.and.returnValue(of(expirationEvent));
+    component.ngOnInit();
+
+    expect(snackBar.open).toHaveBeenCalledWith('Guarantee REF-001 has expired', 'OK', { duration: 5000 });
+  });
+
+  it('should reload calendar data on expiration-auto event', () => {
+    const expirationEvent = {
+      type: 'expiration-auto',
+      eventType: 'expiration-auto',
+      guaranteeId: '1',
+      reference: 'REF-001',
+      status: 'EXPIRED',
+      expiryDate: '2026-07-01',
+      reason: 'Auto-expired by scheduler',
+      expiredAt: '2026-07-19T12:00:00Z'
+    };
+
+    guaranteeService.getExpiryCalendar.and.returnValue(of(mockCalendar));
+    eventsService.guaranteeEvents.and.returnValue(of(expirationEvent));
+
+    const initialCallCount = guaranteeService.getExpiryCalendar.calls.count();
+    component.ngOnInit();
+
+    expect(guaranteeService.getExpiryCalendar.calls.count()).toBeGreaterThan(initialCallCount);
   });
 });

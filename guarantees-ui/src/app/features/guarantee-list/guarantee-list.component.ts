@@ -75,6 +75,7 @@ export class GuaranteeListComponent implements OnInit, OnDestroy {
     this.expirationSubscription = this.eventsService.guaranteeEvents().subscribe({
       next: event => {
         if (event.type === 'expiration-auto') {
+          this.snackBar.open(`Guarantee ${event.reference} has expired`, 'OK', { duration: 5000 });
           this.load();
         }
       },
